@@ -35,7 +35,8 @@ jobs:
           node --check auth.js
           node --check nas.js
           node --check system.js
-
+      - name: Run server smoke test
+        run: npm test
       - name: Check required files
         run: |
           test -f public/index.html
@@ -43,3 +44,4 @@ jobs:
           test -f public/system.html
           test -f scripts/backup-db.sh
           test -f .env.example
+          test -f scripts/smoke-test.sh
