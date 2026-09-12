@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Note10 개인 서버</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 24px;
+      color: #1f2937;
+      background: #f3f4f6;
+      font-family: system-ui, sans-serif;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+    }
+
+    .status {
+      margin-bottom: 24px;
+      color: #047857;
+    }
+
+    form,
+    .note {
+      padding: 18px;
+      margin-bottom: 16px;
+      border-radius: 12px;
+      background: white;
+      box-shadow: 0 2px 8px #00000012;
+    }
+
+    input,
+    textarea,
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font: inherit;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    button {
+      color: white;
+      background: #2563eb;
+      border: 0;
+      cursor: pointer;
+    }
+
+    .delete {
+      width: auto;
+      padding: 8px 12px;
+      background: #dc2626;
+    }
+
+    .note-header {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .note-content {
+      white-space: pre-wrap;
+    }
+
+    .date {
+      color: #6b7280;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Note10 개인 서버</h1>
+  <div id="status" class="status">서버 확인 중...</div>
+
+  <form id="note-form">
+    <input
+      id="title"
+      maxlength="200"
+      placeholder="메모 제목"
+      required
+    >
+
+    <textarea
+      id="content"
+      maxlength="10000"
+      placeholder="메모 내용"
+    ></textarea>
+
+    <button type="submit">메모 저장</button>
+  </form>
+
+  <section id="notes"></section>
+
+  <script>
+    const statusElement = document.querySelector("#status");
+    const form = document.querySelector("#note-form");
+    const notesElement = document.querySelector("#notes");
+
+    async function checkServer() {
+      try {
+        const response = await fetch("/health");
+        if (!response.ok) throw new Error();
+
+        const health = await response.json();
+        statusElement.textContent =
+          `서버 정상 · 가동 ${health.uptimeSeconds}초`;
+      } catch {
+        statusElement.textContent = "서버 연결 실패";
+      }
+    }
+
+    async function loadNotes() {
+      const response = await fetch("/notes");
+      const notes = await response.json();
+
+      notesElement.replaceChildren();
+
+      for (const note of notes) {
+        const article = document.createElement("article");
+        article.className = "note";
+
+        const header = document.createElement("div");
+        header.className = "note-header";
+
+        const title = document.createElement("h2");
+        title.textContent = note.title;
+
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "delete";
+        deleteButton.textContent = "삭제";
+        deleteButton.addEventListener("click", async () => {
+          if (!confirm(`"${note.title}" 메모를 삭제할까요?`)) return;
+
+          await fetch(`/notes/${note.id}`, {
+            method: "DELETE"
+          });
+
+          await loadNotes();
+        });
+
+        const content = document.createElement("p");
+        content.className = "note-content";
+        content.textContent = note.content;
+
+        const date = document.createElement("div");
+        date.className = "date";
+        date.textContent = note.created_at;
+
+        header.append(title, deleteButton);
+        article.append(header, content, date);
+        notesElement.append(article);
+      }
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const response = await fetch("/notes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          title: document.querySelector("#title").value,
+          content: document.querySelector("#content").value
+        })
+      });
+
+      if (!response.ok) {
+        alert("메모를 저장하지 못했습니다.");
+        return;
+      }
+
+      form.reset();
+      await loadNotes();
+    });
+
+    checkServer();
+    loadNotes();
+  </script>
+</body>
+</html>
