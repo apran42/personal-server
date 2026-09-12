@@ -65,6 +65,12 @@
       opacity: 0.6;
     }
 
+    .delete-button {
+        width: auto;
+        padding: 8px 12px;
+        background: #dc2626;
+    }
+
     .upload-box form {
       display: flex;
       gap: 10px;
@@ -90,7 +96,7 @@
 
     .entry {
       display: grid;
-      grid-template-columns: 1fr auto auto;
+      grid-template-columns: 1fr auto auto auto;
       gap: 14px;
       align-items: center;
       padding: 12px;
@@ -154,6 +160,7 @@
   <section class="file-list">
     <div class="path-bar">
       <button id="up-button" type="button">상위 폴더</button>
+      <button id="new-folder-button" type="button">새 폴더</button>
       <span id="current-path">/</span>
     </div>
 
@@ -167,7 +174,7 @@
     const uploadForm = document.querySelector("#upload-form");
     const uploadButton = document.querySelector("#upload-button");
     const upButton = document.querySelector("#up-button");
-
+    const newFolderButton = document.querySelector("#new-folder-button");
     let currentPath = "";
 
     function formatSize(bytes) {
@@ -246,13 +253,92 @@
           date.className = "date";
           date.textContent = new Date(entry.modifiedAt).toLocaleString("ko-KR");
 
-          row.append(name, size, date);
+          const deleteButton = document.createElement("button");
+          deleteButton.className = "delete-button";
+          deleteButton.textContent = "삭제";
+
+          deleteButton.addEventListener("click", async () => {
+        const typeName =
+            entry.type === "directory" ? "폴더" : "파일";
+
+        if (!confirm(`"${entry.name}" ${typeName}을 삭제할까요?`)) {
+            return;
+        }
+
+        deleteButton.disabled = true;
+        messageElement.className = "message";
+        messageElement.textContent = "삭제 중...";
+
+        try {
+            const response = await fetch(
+            `/nas/entry?path=${encodeURIComponent(entry.path)}`,
+            {
+                method: "DELETE"
+            }
+            );
+
+            if (!response.ok) {
+            const result = await response.json();
+
+            throw new Error(
+                result.error || "삭제하지 못했습니다."
+            );
+            }
+
+            messageElement.textContent =
+            `"${entry.name}"을 삭제했습니다.`;
+
+            await loadFiles(currentPath);
+        } catch (error) {
+            messageElement.className = "message error";
+            messageElement.textContent = error.message;
+            deleteButton.disabled = false;
+        }
+        });
+
+        row.append(name, size, date, deleteButton);
           entriesElement.append(row);
         }
       } catch (error) {
         entriesElement.textContent = error.message;
       }
     }
+
+    newFolderButton.addEventListener("click", async () => {
+        const name = prompt("새 폴더 이름을 입력하세요.");
+
+        if (!name || !name.trim()) {
+            return;
+        }
+
+        messageElement.className = "message";
+        messageElement.textContent = "폴더 생성 중...";
+
+        try {
+            const response = await fetch("/nas/folder", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                path: currentPath,
+                name: name.trim()
+            })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+            throw new Error(result.error || "폴더를 만들지 못했습니다.");
+            }
+
+            messageElement.textContent = `"${result.name}" 폴더를 만들었습니다.`;
+            await loadFiles(currentPath);
+        } catch (error) {
+            messageElement.className = "message error";
+            messageElement.textContent = error.message;
+        }
+    });
 
     upButton.addEventListener("click", () => {
       loadFiles(parentPath(currentPath));

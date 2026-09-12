@@ -114,6 +114,100 @@ router.get("/files", async (req, res, next) => {
   }
 });
 
+router.post("/folder", async (req, res, next) => {
+  try {
+    const relativePath =
+      typeof req.body.path === "string" ? req.body.path : "";
+
+    const requestedName =
+      typeof req.body.name === "string" ? req.body.name.trim() : "";
+
+    if (!requestedName || requestedName.length > 100) {
+      return res.status(400).json({
+        error: "folder name must be between 1 and 100 characters"
+      });
+    }
+
+    const folderName = cleanFilename(requestedName);
+
+    if (folderName === "." || folderName === "..") {
+      return res.status(400).json({
+        error: "invalid folder name"
+      });
+    }
+
+    const folderPath = resolveNasPath(
+      path.join(relativePath, folderName)
+    );
+
+    await fs.promises.mkdir(folderPath);
+
+    return res.status(201).json({
+      name: folderName,
+      path: path.posix.join(
+        relativePath.replaceAll("\\", "/"),
+        folderName
+      )
+    });
+  } catch (error) {
+    if (error.code === "EEXIST") {
+      return res.status(409).json({
+        error: "folder already exists"
+      });
+    }
+
+    if (error.code === "ENOENT") {
+      return res.status(404).json({
+        error: "parent folder not found"
+      });
+    }
+
+    return next(error);
+  }
+});
+
+router.delete("/entry", async (req, res, next) => {
+  try {
+    if (typeof req.query.path !== "string" || !req.query.path) {
+      return res.status(400).json({
+        error: "path is required"
+      });
+    }
+
+    const targetPath = resolveNasPath(req.query.path);
+
+    if (targetPath === nasRoot) {
+      return res.status(400).json({
+        error: "NAS root cannot be deleted"
+      });
+    }
+
+    const stat = await fs.promises.lstat(targetPath);
+
+    if (stat.isDirectory()) {
+      await fs.promises.rmdir(targetPath);
+    } else {
+      await fs.promises.unlink(targetPath);
+    }
+
+    return res.status(204).end();
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return res.status(404).json({
+        error: "file or folder not found"
+      });
+    }
+
+    if (error.code === "ENOTEMPTY") {
+      return res.status(409).json({
+        error: "folder is not empty"
+      });
+    }
+
+    return next(error);
+  }
+});
+
 router.get("/download", async (req, res, next) => {
   try {
     if (typeof req.query.path !== "string") {
