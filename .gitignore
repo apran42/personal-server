@@ -1,8 +1,17 @@
 node_modules/
 .venv/
-.env
-*.log
-data/*.db
-data/*.db-*
-backups/*.db
 
+.env
+.env.*
+!.env.example
+
+*.log
+*.db
+*.db-*
+
+backups/*
+!backups/.gitkeep
+
+uploads/
+tmp/
+.DS_Store
