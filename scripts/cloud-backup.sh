@@ -5,6 +5,7 @@ set -eu
 APP_DIR="$HOME/apps/myserver"
 BACKUP_DIR="$APP_DIR/backups"
 NAS_DIR="$HOME/storage/shared/NAS"
+
 DATABASE_REMOTE="gcrypt:Database"
 NAS_REMOTE="gcrypt:NAS"
 
@@ -33,7 +34,7 @@ rclone copyto \
 echo "Checking uploaded database"
 
 if ! rclone lsf "$DATABASE_REMOTE" |
-     grep -Fx "$BACKUP_NAME" >/dev/null; then
+    grep -Fx "$BACKUP_NAME" >/dev/null; then
     echo "Uploaded database backup was not found."
     exit 1
 fi
@@ -44,22 +45,15 @@ rclone delete "$DATABASE_REMOTE" \
     --min-age 90d \
     --include 'server-*.db'
 
-for DIRECTORY in Documents Backups; do
+for DIRECTORY in Documents Backups Uploads; do
     SOURCE="$NAS_DIR/$DIRECTORY"
     DESTINATION="$NAS_REMOTE/$DIRECTORY"
 
     if [ -d "$SOURCE" ]; then
         echo "Uploading NAS folder: $DIRECTORY"
-    if [ -d "$SOURCE" ]; then
-        echo "Uploading NAS folder: $DIRECTORY"
 
-    rclone mkdir "$DESTINATION"
+        rclone mkdir "$DESTINATION"
 
-    rclone copy \
-        "$SOURCE" \
-        "$DESTINATION" \
-        --create-empty-src-dirs
-fi
         rclone copy \
             "$SOURCE" \
             "$DESTINATION" \
