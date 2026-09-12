@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Note10 서버 상태</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px;
+      color: #1f2937;
+      background: #f3f4f6;
+      font-family: system-ui, sans-serif;
+    }
+
+    header,
+    .card {
+      padding: 18px;
+      margin-bottom: 16px;
+      border-radius: 12px;
+      background: white;
+      box-shadow: 0 2px 8px #00000012;
+    }
+
+    header {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    h1,
+    h2 {
+      margin-top: 0;
+    }
+
+    nav {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    a {
+      color: #2563eb;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(
+        auto-fit,
+        minmax(240px, 1fr)
+      );
+      gap: 16px;
+    }
+
+    .value {
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .detail {
+      margin-top: 8px;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+
+    .progress {
+      height: 12px;
+      margin-top: 12px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e5e7eb;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: #2563eb;
+      transition: width 0.3s;
+    }
+
+    .warning {
+      background: #dc2626;
+    }
+
+    #status-message {
+      color: #047857;
+    }
+
+    .error {
+      color: #dc2626;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div>
+      <h1>Note10 서버 상태</h1>
+      <div id="status-message">상태 확인 중...</div>
+    </div>
+
+    <nav>
+      <a href="/">메모</a>
+      <a href="/nas.html">NAS</a>
+    </nav>
+  </header>
+
+  <main class="grid">
+    <section class="card">
+      <h2>시스템</h2>
+      <div id="hostname" class="value">-</div>
+      <div id="system-detail" class="detail">-</div>
+    </section>
+
+    <section class="card">
+      <h2>가동 시간</h2>
+      <div id="device-uptime" class="value">-</div>
+      <div id="server-uptime" class="detail">-</div>
+    </section>
+
+    <section class="card">
+      <h2>메모리</h2>
+      <div id="memory-value" class="value">-</div>
+
+      <div class="progress">
+        <div id="memory-bar" class="progress-bar"></div>
+      </div>
+
+      <div id="memory-detail" class="detail">-</div>
+    </section>
+
+    <section class="card">
+      <h2>NAS 저장공간</h2>
+      <div id="storage-value" class="value">-</div>
+
+      <div class="progress">
+        <div id="storage-bar" class="progress-bar"></div>
+      </div>
+
+      <div id="storage-detail" class="detail">-</div>
+    </section>
+
+    <section class="card">
+      <h2>시스템 부하</h2>
+      <div id="load-value" class="value">-</div>
+      <div class="detail">1분 · 5분 · 15분 평균</div>
+    </section>
+
+    <section class="card">
+      <h2>서버 프로세스</h2>
+      <div id="process-memory" class="value">-</div>
+      <div class="detail">Node.js 프로세스 메모리 사용량</div>
+    </section>
+  </main>
+
+  <script>
+    const statusMessage =
+      document.querySelector("#status-message");
+
+    function formatBytes(bytes) {
+      const units = ["B", "KB", "MB", "GB", "TB"];
+      let value = bytes;
+      let index = 0;
+
+      while (value >= 1024 && index < units.length - 1) {
+        value /= 1024;
+        index += 1;
+      }
+
+      return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+    }
+
+    function formatDuration(totalSeconds) {
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+      return `${days}일 ${hours}시간 ${minutes}분`;
+    }
+
+    function setProgress(element, used, total) {
+      const percent = total > 0 ? (used / total) * 100 : 0;
+      element.style.width = `${Math.min(percent, 100)}%`;
+      element.classList.toggle("warning", percent >= 85);
+      return percent;
+    }
+
+    async function loadStatus() {
+      try {
+        const response = await fetch("/system/status");
+
+        if (!response.ok) {
+          throw new Error("서버 상태를 가져오지 못했습니다.");
+        }
+
+        const data = await response.json();
+
+        document.querySelector("#hostname").textContent =
+          data.system.hostname;
+
+        document.querySelector("#system-detail").textContent =
+          `${data.system.platform} · ${data.system.architecture} · Node ${data.system.nodeVersion}`;
+
+        document.querySelector("#device-uptime").textContent =
+          formatDuration(data.uptime.deviceSeconds);
+
+        document.querySelector("#server-uptime").textContent =
+          `웹 서버: ${formatDuration(data.uptime.serverSeconds)}`;
+
+        const memoryPercent = setProgress(
+          document.querySelector("#memory-bar"),
+          data.memory.used,
+          data.memory.total
+        );
+
+        document.querySelector("#memory-value").textContent =
+          `${memoryPercent.toFixed(1)}% 사용`;
+
+        document.querySelector("#memory-detail").textContent =
+          `${formatBytes(data.memory.used)} / ${formatBytes(data.memory.total)}`;
+
+        const storagePercent = setProgress(
+          document.querySelector("#storage-bar"),
+          data.nasStorage.used,
+          data.nasStorage.total
+        );
+
+        document.querySelector("#storage-value").textContent =
+          `${storagePercent.toFixed(1)}% 사용`;
+
+        document.querySelector("#storage-detail").textContent =
+          `${formatBytes(data.nasStorage.used)} / ${formatBytes(data.nasStorage.total)}`;
+
+        document.querySelector("#load-value").textContent =
+          data.loadAverage
+            .map((value) => value.toFixed(2))
+            .join(" · ");
+
+        document.querySelector("#process-memory").textContent =
+          formatBytes(data.memory.serverRss);
+
+        statusMessage.className = "";
+        statusMessage.textContent =
+          `정상 · ${new Date(data.checkedAt).toLocaleString("ko-KR")}`;
+      } catch (error) {
+        statusMessage.className = "error";
+        statusMessage.textContent = error.message;
+      }
+    }
+
+    loadStatus();
+    setInterval(loadStatus, 10000);
+  </script>
+</body>
+</html>

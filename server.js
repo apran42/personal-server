@@ -1,3 +1,4 @@
+const systemRouter = require("./system");
 const nasRouter = require("./nas");
 const basicAuth = require("./auth");
 const express = require("express");
@@ -25,6 +26,7 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "100kb" }));
 app.use(basicAuth);
 app.use("/nas", nasRouter);
+app.use("/system", systemRouter);
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
