@@ -42,7 +42,8 @@ for SCRIPT in \
     cleanup-trash.sh \
     run-backup-monitored.sh \
     check-server-health.sh \
-    rotate-logs.sh
+    rotate-logs.sh \
+    check-storage.sh
 do
     cp \
         "$REPO_DIR/scripts/$SCRIPT" \
@@ -55,7 +56,8 @@ chmod +x \
     "$APP_DIR/scripts/cleanup-trash.sh" \
     "$APP_DIR/scripts/run-backup-monitored.sh" \
     "$APP_DIR/scripts/check-server-health.sh" \
-    "$APP_DIR/scripts/rotate-logs.sh"
+    "$APP_DIR/scripts/rotate-logs.sh" \
+    "$APP_DIR/scripts/check-storage.sh"
 
 echo "6/6 Restarting server"
 
