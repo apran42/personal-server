@@ -40,7 +40,8 @@ for SCRIPT in \
     backup-db.sh \
     cloud-backup.sh \
     cleanup-trash.sh \
-    run-backup-monitored.sh
+    run-backup-monitored.sh \
+    check-server-health.sh
 do
     cp \
         "$REPO_DIR/scripts/$SCRIPT" \
@@ -51,7 +52,8 @@ chmod +x \
     "$APP_DIR/scripts/backup-db.sh" \
     "$APP_DIR/scripts/cloud-backup.sh" \
     "$APP_DIR/scripts/cleanup-trash.sh" \
-    "$APP_DIR/scripts/run-backup-monitored.sh"
+    "$APP_DIR/scripts/run-backup-monitored.sh" \
+    "$APP_DIR/scripts/check-server-health.sh"
 
 echo "6/6 Restarting server"
 
