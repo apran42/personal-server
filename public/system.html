@@ -2,7 +2,10 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
 
   <title>Note10 서버 상태</title>
 
@@ -44,11 +47,26 @@
     nav {
       display: flex;
       gap: 12px;
+      align-items: center;
       flex-wrap: wrap;
     }
 
     a {
       color: #2563eb;
+    }
+
+    button {
+      padding: 7px 12px;
+      border: 0;
+      border-radius: 8px;
+      color: white;
+      background: #2563eb;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: wait;
     }
 
     .grid {
@@ -69,6 +87,7 @@
       margin-top: 8px;
       color: #6b7280;
       line-height: 1.6;
+      overflow-wrap: anywhere;
     }
 
     .progress {
@@ -87,12 +106,16 @@
       transition: width 0.3s;
     }
 
-    .warning {
+    .progress-bar.warning {
       background: #dc2626;
     }
 
-    #status-message {
+    .status-good {
       color: #047857;
+    }
+
+    .status-warning {
+      color: #b45309;
     }
 
     .error {
@@ -111,6 +134,9 @@
     <nav>
       <a href="/">메모</a>
       <a href="/nas.html">NAS</a>
+      <button id="refresh-button" type="button">
+        새로고침
+      </button>
     </nav>
   </header>
 
@@ -132,7 +158,10 @@
       <div id="memory-value" class="value">-</div>
 
       <div class="progress">
-        <div id="memory-bar" class="progress-bar"></div>
+        <div
+          id="memory-bar"
+          class="progress-bar"
+        ></div>
       </div>
 
       <div id="memory-detail" class="detail">-</div>
@@ -143,22 +172,37 @@
       <div id="storage-value" class="value">-</div>
 
       <div class="progress">
-        <div id="storage-bar" class="progress-bar"></div>
+        <div
+          id="storage-bar"
+          class="progress-bar"
+        ></div>
       </div>
 
       <div id="storage-detail" class="detail">-</div>
     </section>
 
     <section class="card">
+      <h2>백업 상태</h2>
+      <div id="backup-status" class="value">
+        확인 중
+      </div>
+      <div id="backup-detail" class="detail">-</div>
+    </section>
+
+    <section class="card">
       <h2>시스템 부하</h2>
       <div id="load-value" class="value">-</div>
-      <div class="detail">1분 · 5분 · 15분 평균</div>
+      <div class="detail">
+        1분 · 5분 · 15분 평균
+      </div>
     </section>
 
     <section class="card">
       <h2>서버 프로세스</h2>
       <div id="process-memory" class="value">-</div>
-      <div class="detail">Node.js 프로세스 메모리 사용량</div>
+      <div class="detail">
+        Node.js 프로세스 메모리 사용량
+      </div>
     </section>
   </main>
 
@@ -166,55 +210,151 @@
     const statusMessage =
       document.querySelector("#status-message");
 
+    const refreshButton =
+      document.querySelector("#refresh-button");
+
     function formatBytes(bytes) {
       const units = ["B", "KB", "MB", "GB", "TB"];
       let value = bytes;
       let index = 0;
 
-      while (value >= 1024 && index < units.length - 1) {
+      while (
+        value >= 1024 &&
+        index < units.length - 1
+      ) {
         value /= 1024;
         index += 1;
       }
 
-      return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+      return `${value.toFixed(
+        index === 0 ? 0 : 1
+      )} ${units[index]}`;
     }
 
     function formatDuration(totalSeconds) {
       const days = Math.floor(totalSeconds / 86400);
-      const hours = Math.floor((totalSeconds % 86400) / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const hours = Math.floor(
+        (totalSeconds % 86400) / 3600
+      );
+      const minutes = Math.floor(
+        (totalSeconds % 3600) / 60
+      );
 
       return `${days}일 ${hours}시간 ${minutes}분`;
     }
 
+    function formatDate(value) {
+      if (!value) {
+        return "기록 없음";
+      }
+
+      return new Date(value).toLocaleString("ko-KR");
+    }
+
     function setProgress(element, used, total) {
-      const percent = total > 0 ? (used / total) * 100 : 0;
-      element.style.width = `${Math.min(percent, 100)}%`;
-      element.classList.toggle("warning", percent >= 85);
+      const percent =
+        total > 0 ? (used / total) * 100 : 0;
+
+      element.style.width =
+        `${Math.min(percent, 100)}%`;
+
+      element.classList.toggle(
+        "warning",
+        percent >= 85
+      );
+
       return percent;
     }
 
+    function renderBackup(backup) {
+      const statusElement =
+        document.querySelector("#backup-status");
+
+      const detailElement =
+        document.querySelector("#backup-detail");
+
+      const latest = backup.latestLocal;
+      const cloud = backup.cloud;
+
+      if (!latest) {
+        statusElement.textContent = "백업 없음";
+        statusElement.className = "value error";
+        detailElement.textContent =
+          "로컬 데이터베이스 백업을 찾지 못했습니다.";
+        return;
+      }
+
+      let statusText = "정상";
+      let statusClass = "value status-good";
+
+      if (cloud.status === "failed") {
+        statusText = "클라우드 백업 실패";
+        statusClass = "value error";
+      } else if (backup.stale) {
+        statusText = "백업 확인 필요";
+        statusClass = "value status-warning";
+      } else if (cloud.status === "unknown") {
+        statusText = "클라우드 상태 미확인";
+        statusClass = "value status-warning";
+      }
+
+      statusElement.textContent = statusText;
+      statusElement.className = statusClass;
+
+      const cloudStatusText = {
+        success: "성공",
+        failed: "실패",
+        unknown: "기록 없음"
+      }[cloud.status];
+
+      detailElement.innerHTML = [
+        `최신 DB: ${latest.name}`,
+        `생성: ${formatDate(latest.modifiedAt)}`,
+        `크기: ${formatBytes(latest.size)}`,
+        `클라우드: ${cloudStatusText}`,
+        `마지막 작업: ${formatDate(cloud.updatedAt)}`
+      ].join("<br>");
+    }
+
     async function loadStatus() {
+      refreshButton.disabled = true;
+
       try {
-        const response = await fetch("/system/status");
+        const response = await fetch(
+          "/system/status",
+          { cache: "no-store" }
+        );
 
         if (!response.ok) {
-          throw new Error("서버 상태를 가져오지 못했습니다.");
+          throw new Error(
+            "서버 상태를 가져오지 못했습니다."
+          );
         }
 
         const data = await response.json();
 
-        document.querySelector("#hostname").textContent =
-          data.system.hostname;
+        document.querySelector(
+          "#hostname"
+        ).textContent = data.system.hostname;
 
-        document.querySelector("#system-detail").textContent =
-          `${data.system.platform} · ${data.system.architecture} · Node ${data.system.nodeVersion}`;
+        document.querySelector(
+          "#system-detail"
+        ).textContent =
+          `${data.system.platform} · ` +
+          `${data.system.architecture} · ` +
+          `Node ${data.system.nodeVersion}`;
 
-        document.querySelector("#device-uptime").textContent =
+        document.querySelector(
+          "#device-uptime"
+        ).textContent =
           formatDuration(data.uptime.deviceSeconds);
 
-        document.querySelector("#server-uptime").textContent =
-          `웹 서버: ${formatDuration(data.uptime.serverSeconds)}`;
+        document.querySelector(
+          "#server-uptime"
+        ).textContent =
+          `웹 서버: ${
+            formatDuration(data.uptime.serverSeconds)
+          }`;
 
         const memoryPercent = setProgress(
           document.querySelector("#memory-bar"),
@@ -222,11 +362,16 @@
           data.memory.total
         );
 
-        document.querySelector("#memory-value").textContent =
+        document.querySelector(
+          "#memory-value"
+        ).textContent =
           `${memoryPercent.toFixed(1)}% 사용`;
 
-        document.querySelector("#memory-detail").textContent =
-          `${formatBytes(data.memory.used)} / ${formatBytes(data.memory.total)}`;
+        document.querySelector(
+          "#memory-detail"
+        ).textContent =
+          `${formatBytes(data.memory.used)} / ` +
+          `${formatBytes(data.memory.total)}`;
 
         const storagePercent = setProgress(
           document.querySelector("#storage-bar"),
@@ -234,31 +379,55 @@
           data.nasStorage.total
         );
 
-        document.querySelector("#storage-value").textContent =
+        document.querySelector(
+          "#storage-value"
+        ).textContent =
           `${storagePercent.toFixed(1)}% 사용`;
 
-        document.querySelector("#storage-detail").textContent =
-          `${formatBytes(data.nasStorage.used)} / ${formatBytes(data.nasStorage.total)}`;
+        document.querySelector(
+          "#storage-detail"
+        ).textContent =
+          `${formatBytes(data.nasStorage.used)} / ` +
+          `${formatBytes(data.nasStorage.total)}`;
 
-        document.querySelector("#load-value").textContent =
-          data.loadAverage
-            .map((value) => value.toFixed(2))
-            .join(" · ");
+        document.querySelector(
+          "#load-value"
+        ).textContent = data.loadAverage
+          .map((value) => value.toFixed(2))
+          .join(" · ");
 
-        document.querySelector("#process-memory").textContent =
+        document.querySelector(
+          "#process-memory"
+        ).textContent =
           formatBytes(data.memory.serverRss);
 
-        statusMessage.className = "";
+        renderBackup(data.backup);
+
+        const hasWarning =
+          data.backup.stale ||
+          data.backup.cloud.status !== "success";
+
+        statusMessage.className =
+          hasWarning ? "status-warning" : "status-good";
+
         statusMessage.textContent =
-          `정상 · ${new Date(data.checkedAt).toLocaleString("ko-KR")}`;
+          `${hasWarning ? "확인 필요" : "정상"} · ` +
+          `${formatDate(data.checkedAt)}`;
       } catch (error) {
         statusMessage.className = "error";
         statusMessage.textContent = error.message;
+      } finally {
+        refreshButton.disabled = false;
       }
     }
 
+    refreshButton.addEventListener(
+      "click",
+      loadStatus
+    );
+
     loadStatus();
-    setInterval(loadStatus, 10000);
+    setInterval(loadStatus, 30000);
   </script>
 </body>
 </html>
