@@ -87,6 +87,36 @@ function cleanFilename(filename) {
   return cleaned || "unnamed";
 }
 
+function createAvailableFilename(
+  directory,
+  originalFilename
+) {
+  const cleanedName =
+    cleanFilename(originalFilename);
+
+  const extension =
+    path.extname(cleanedName);
+
+  const baseName =
+    path.basename(cleanedName, extension);
+
+  let candidate = cleanedName;
+  let number = 1;
+
+  while (
+    fs.existsSync(
+      path.join(directory, candidate)
+    )
+  ) {
+    candidate =
+      `${baseName} (${number})${extension}`;
+
+    number += 1;
+  }
+
+  return candidate;
+}
+
 async function pathExists(targetPath) {
   try {
     await fs.promises.access(targetPath);
@@ -263,18 +293,22 @@ const storage = multer.diskStorage({
     }
   },
 
-  filename(req, file, callback) {
-    const filename = cleanFilename(file.originalname);
+    filename(req, file, callback) {
+    try {
+      const directory = resolveNasPath(
+        req.query.dir || "Uploads"
+      );
 
-    const uniquePrefix =
-      `${Date.now()}-${Math.round(
-        Math.random() * 1e9
-      )}`;
+      const filename =
+        createAvailableFilename(
+          directory,
+          file.originalname
+        );
 
-    callback(
-      null,
-      `${uniquePrefix}-${filename}`
-    );
+      callback(null, filename);
+    } catch (error) {
+      callback(error);
+    }
   }
 });
 
