@@ -1,6 +1,7 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const multer = require("multer");
 
 const router = express.Router();
@@ -12,14 +13,65 @@ const nasRoot = path.join(
   "NAS"
 );
 
+const trashRoot = path.join(nasRoot, ".Trash");
+
 fs.mkdirSync(nasRoot, { recursive: true });
+fs.mkdirSync(trashRoot, { recursive: true });
+
+function createHttpError(status, message) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+}
+
+function toPosixPath(value) {
+  return value.replaceAll("\\", "/");
+}
+
+function isTrashPath(relativePath) {
+  const normalized = toPosixPath(relativePath)
+    .replace(/^\/+|\/+$/g, "");
+
+  return (
+    normalized === ".Trash" ||
+    normalized.startsWith(".Trash/")
+  );
+}
 
 function resolveNasPath(relativePath = "") {
+  if (
+    typeof relativePath !== "string" ||
+    isTrashPath(relativePath)
+  ) {
+    throw createHttpError(400, "Invalid NAS path");
+  }
+
   const target = path.resolve(nasRoot, relativePath);
   const rootPrefix = `${nasRoot}${path.sep}`;
 
-  if (target !== nasRoot && !target.startsWith(rootPrefix)) {
-    throw new Error("Invalid NAS path");
+  if (
+    target !== nasRoot &&
+    !target.startsWith(rootPrefix)
+  ) {
+    throw createHttpError(400, "Invalid NAS path");
+  }
+
+  return target;
+}
+
+function resolveTrashItem(itemId) {
+  if (
+    typeof itemId !== "string" ||
+    !/^\d+-[0-9a-f-]{36}$/i.test(itemId)
+  ) {
+    throw createHttpError(400, "Invalid trash item");
+  }
+
+  const target = path.resolve(trashRoot, itemId);
+  const trashPrefix = `${trashRoot}${path.sep}`;
+
+  if (!target.startsWith(trashPrefix)) {
+    throw createHttpError(400, "Invalid trash item");
   }
 
   return target;
@@ -32,13 +84,72 @@ function cleanFilename(filename) {
     .replace(/[<>:"/\\|?*\x00-\x1f]/g, "_")
     .trim();
 
-  return cleaned || "uploaded-file";
+  return cleaned || "unnamed";
+}
+
+async function pathExists(targetPath) {
+  try {
+    await fs.promises.access(targetPath);
+    return true;
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
+async function getSafeEntry(targetPath) {
+  const stat = await fs.promises.lstat(targetPath);
+
+  if (stat.isSymbolicLink()) {
+    throw createHttpError(
+      400,
+      "Symbolic links are not supported"
+    );
+  }
+
+  return stat;
+}
+
+function handleFileError(error, res, next) {
+  if (error.status) {
+    return res.status(error.status).json({
+      error: error.message
+    });
+  }
+
+  if (error.code === "ENOENT") {
+    return res.status(404).json({
+      error: "File or folder not found"
+    });
+  }
+
+  if (error.code === "EEXIST") {
+    return res.status(409).json({
+      error: "A file or folder already exists"
+    });
+  }
+
+  if (
+    error.code === "EACCES" ||
+    error.code === "EPERM"
+  ) {
+    return res.status(403).json({
+      error: "Permission denied"
+    });
+  }
+
+  return next(error);
 }
 
 const storage = multer.diskStorage({
   destination(req, file, callback) {
     try {
-      const destination = resolveNasPath(req.query.dir || "Uploads");
+      const destination = resolveNasPath(
+        req.query.dir || "Uploads"
+      );
 
       fs.mkdirSync(destination, { recursive: true });
       callback(null, destination);
@@ -49,9 +160,16 @@ const storage = multer.diskStorage({
 
   filename(req, file, callback) {
     const filename = cleanFilename(file.originalname);
-    const uniquePrefix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 
-    callback(null, `${uniquePrefix}-${filename}`);
+    const uniquePrefix =
+      `${Date.now()}-${Math.round(
+        Math.random() * 1e9
+      )}`;
+
+    callback(
+      null,
+      `${uniquePrefix}-${filename}`
+    );
   }
 });
 
@@ -72,26 +190,59 @@ const upload = multer({
 router.get("/files", async (req, res, next) => {
   try {
     const relativePath =
-      typeof req.query.path === "string" ? req.query.path : "";
+      typeof req.query.path === "string"
+        ? req.query.path
+        : "";
 
     const directory = resolveNasPath(relativePath);
-    const entries = await fs.promises.readdir(directory, {
-      withFileTypes: true
-    });
+    const directoryStat =
+      await getSafeEntry(directory);
+
+    if (!directoryStat.isDirectory()) {
+      throw createHttpError(
+        400,
+        "Requested path is not a directory"
+      );
+    }
+
+    const entries = await fs.promises.readdir(
+      directory,
+      { withFileTypes: true }
+    );
+
+    const visibleEntries = entries.filter(
+      (entry) =>
+        entry.name !== ".Trash" &&
+        !entry.isSymbolicLink()
+    );
 
     const files = await Promise.all(
-      entries.map(async (entry) => {
-        const fullPath = path.join(directory, entry.name);
-        const stat = await fs.promises.stat(fullPath);
+      visibleEntries.map(async (entry) => {
+        const fullPath = path.join(
+          directory,
+          entry.name
+        );
+
+        const stat = await fs.promises.lstat(
+          fullPath
+        );
 
         return {
           name: entry.name,
+
           path: path.posix.join(
-            relativePath.replaceAll("\\", "/"),
+            toPosixPath(relativePath),
             entry.name
           ),
-          type: entry.isDirectory() ? "directory" : "file",
-          size: entry.isDirectory() ? null : stat.size,
+
+          type: entry.isDirectory()
+            ? "directory"
+            : "file",
+
+          size: entry.isDirectory()
+            ? null
+            : stat.size,
+
           modifiedAt: stat.mtime.toISOString()
         };
       })
@@ -99,41 +250,59 @@ router.get("/files", async (req, res, next) => {
 
     files.sort((left, right) => {
       if (left.type !== right.type) {
-        return left.type === "directory" ? -1 : 1;
+        return left.type === "directory"
+          ? -1
+          : 1;
       }
 
-      return left.name.localeCompare(right.name, "ko");
+      return left.name.localeCompare(
+        right.name,
+        "ko"
+      );
     });
 
-    res.json({
-      path: relativePath,
+    return res.json({
+      path: toPosixPath(relativePath),
       files
     });
   } catch (error) {
-    next(error);
+    return handleFileError(error, res, next);
   }
 });
 
 router.post("/folder", async (req, res, next) => {
   try {
     const relativePath =
-      typeof req.body.path === "string" ? req.body.path : "";
+      typeof req.body.path === "string"
+        ? req.body.path
+        : "";
 
     const requestedName =
-      typeof req.body.name === "string" ? req.body.name.trim() : "";
+      typeof req.body.name === "string"
+        ? req.body.name.trim()
+        : "";
 
-    if (!requestedName || requestedName.length > 100) {
-      return res.status(400).json({
-        error: "folder name must be between 1 and 100 characters"
-      });
+    if (
+      !requestedName ||
+      requestedName.length > 100
+    ) {
+      throw createHttpError(
+        400,
+        "Folder name must be between 1 and 100 characters"
+      );
     }
 
-    const folderName = cleanFilename(requestedName);
+    const folderName =
+      cleanFilename(requestedName);
 
-    if (folderName === "." || folderName === "..") {
-      return res.status(400).json({
-        error: "invalid folder name"
-      });
+    if (
+      folderName === "." ||
+      folderName === ".."
+    ) {
+      throw createHttpError(
+        400,
+        "Invalid folder name"
+      );
     }
 
     const folderPath = resolveNasPath(
@@ -144,96 +313,440 @@ router.post("/folder", async (req, res, next) => {
 
     return res.status(201).json({
       name: folderName,
+
       path: path.posix.join(
-        relativePath.replaceAll("\\", "/"),
+        toPosixPath(relativePath),
         folderName
       )
     });
   } catch (error) {
-    if (error.code === "EEXIST") {
-      return res.status(409).json({
-        error: "folder already exists"
-      });
+    return handleFileError(error, res, next);
+  }
+});
+
+router.patch("/entry", async (req, res, next) => {
+  try {
+    const relativePath =
+      typeof req.body.path === "string"
+        ? req.body.path
+        : "";
+
+    const requestedName =
+      typeof req.body.name === "string"
+        ? req.body.name.trim()
+        : "";
+
+    if (!relativePath) {
+      throw createHttpError(
+        400,
+        "Path is required"
+      );
     }
 
-    if (error.code === "ENOENT") {
-      return res.status(404).json({
-        error: "parent folder not found"
-      });
+    if (
+      !requestedName ||
+      requestedName.length > 255
+    ) {
+      throw createHttpError(
+        400,
+        "Name must be between 1 and 255 characters"
+      );
     }
 
-    return next(error);
+    const sourcePath =
+      resolveNasPath(relativePath);
+
+    if (sourcePath === nasRoot) {
+      throw createHttpError(
+        400,
+        "NAS root cannot be renamed"
+      );
+    }
+
+    await getSafeEntry(sourcePath);
+
+    const newName = cleanFilename(requestedName);
+
+    if (
+      newName === "." ||
+      newName === ".."
+    ) {
+      throw createHttpError(
+        400,
+        "Invalid name"
+      );
+    }
+
+    const destinationPath = path.join(
+      path.dirname(sourcePath),
+      newName
+    );
+
+    if (await pathExists(destinationPath)) {
+      throw createHttpError(
+        409,
+        "A file or folder with that name already exists"
+      );
+    }
+
+    await fs.promises.rename(
+      sourcePath,
+      destinationPath
+    );
+
+    const parentRelative = path.dirname(
+      toPosixPath(relativePath)
+    );
+
+    return res.json({
+      name: newName,
+
+      path: path.posix.join(
+        parentRelative === "."
+          ? ""
+          : parentRelative,
+        newName
+      )
+    });
+  } catch (error) {
+    return handleFileError(error, res, next);
+  }
+});
+
+router.post("/move", async (req, res, next) => {
+  try {
+    const sourceRelative =
+      typeof req.body.path === "string"
+        ? req.body.path
+        : "";
+
+    const destinationRelative =
+      typeof req.body.destination === "string"
+        ? req.body.destination
+        : "";
+
+    if (!sourceRelative) {
+      throw createHttpError(
+        400,
+        "Path is required"
+      );
+    }
+
+    const sourcePath =
+      resolveNasPath(sourceRelative);
+
+    const destinationDirectory =
+      resolveNasPath(destinationRelative);
+
+    if (sourcePath === nasRoot) {
+      throw createHttpError(
+        400,
+        "NAS root cannot be moved"
+      );
+    }
+
+    const sourceStat =
+      await getSafeEntry(sourcePath);
+
+    const destinationStat =
+      await getSafeEntry(destinationDirectory);
+
+    if (!destinationStat.isDirectory()) {
+      throw createHttpError(
+        400,
+        "Destination is not a directory"
+      );
+    }
+
+    if (
+      sourceStat.isDirectory() &&
+      (
+        destinationDirectory === sourcePath ||
+        destinationDirectory.startsWith(
+          `${sourcePath}${path.sep}`
+        )
+      )
+    ) {
+      throw createHttpError(
+        400,
+        "A folder cannot be moved inside itself"
+      );
+    }
+
+    const destinationPath = path.join(
+      destinationDirectory,
+      path.basename(sourcePath)
+    );
+
+    if (await pathExists(destinationPath)) {
+      throw createHttpError(
+        409,
+        "The destination already contains that name"
+      );
+    }
+
+    await fs.promises.rename(
+      sourcePath,
+      destinationPath
+    );
+
+    return res.json({
+      path: path.posix.join(
+        toPosixPath(destinationRelative),
+        path.basename(sourcePath)
+      )
+    });
+  } catch (error) {
+    return handleFileError(error, res, next);
   }
 });
 
 router.delete("/entry", async (req, res, next) => {
+  let trashItemPath = null;
+
   try {
-    if (typeof req.query.path !== "string" || !req.query.path) {
-      return res.status(400).json({
-        error: "path is required"
-      });
+    if (
+      typeof req.query.path !== "string" ||
+      !req.query.path
+    ) {
+      throw createHttpError(
+        400,
+        "Path is required"
+      );
     }
 
-    const targetPath = resolveNasPath(req.query.path);
+    const relativePath = req.query.path;
+    const targetPath =
+      resolveNasPath(relativePath);
 
     if (targetPath === nasRoot) {
-      return res.status(400).json({
-        error: "NAS root cannot be deleted"
-      });
+      throw createHttpError(
+        400,
+        "NAS root cannot be deleted"
+      );
     }
 
-    const stat = await fs.promises.lstat(targetPath);
+    const stat = await getSafeEntry(targetPath);
 
-    if (stat.isDirectory()) {
-      await fs.promises.rmdir(targetPath);
-    } else {
-      await fs.promises.unlink(targetPath);
-    }
+    const itemId =
+      `${Date.now()}-${crypto.randomUUID()}`;
 
-    return res.status(204).end();
+    trashItemPath = resolveTrashItem(itemId);
+
+    await fs.promises.mkdir(
+      trashItemPath,
+      { recursive: false }
+    );
+
+    const contentPath = path.join(
+      trashItemPath,
+      "content"
+    );
+
+    await fs.promises.rename(
+      targetPath,
+      contentPath
+    );
+
+    const metadata = {
+      id: itemId,
+      name: path.basename(targetPath),
+      originalPath: toPosixPath(relativePath),
+      type: stat.isDirectory()
+        ? "directory"
+        : "file",
+      size: stat.isFile() ? stat.size : null,
+      deletedAt: new Date().toISOString()
+    };
+
+    await fs.promises.writeFile(
+      path.join(trashItemPath, "metadata.json"),
+      JSON.stringify(metadata, null, 2),
+      {
+        encoding: "utf8",
+        mode: 0o600
+      }
+    );
+
+    return res.status(202).json(metadata);
   } catch (error) {
-    if (error.code === "ENOENT") {
-      return res.status(404).json({
-        error: "file or folder not found"
-      });
+    if (trashItemPath) {
+      const contentPath = path.join(
+        trashItemPath,
+        "content"
+      );
+
+      if (await pathExists(contentPath)) {
+        const metadataPath = path.join(
+          trashItemPath,
+          "metadata.json"
+        );
+
+        if (!(await pathExists(metadataPath))) {
+          console.error(
+            "Trash metadata creation failed:",
+            trashItemPath
+          );
+        }
+      }
     }
 
-    if (error.code === "ENOTEMPTY") {
-      return res.status(409).json({
-        error: "folder is not empty"
-      });
-    }
-
-    return next(error);
+    return handleFileError(error, res, next);
   }
 });
 
-router.get("/download", async (req, res, next) => {
+router.get("/trash", async (req, res, next) => {
   try {
-    if (typeof req.query.path !== "string") {
-      return res.status(400).json({
-        error: "path is required"
-      });
+    const entries = await fs.promises.readdir(
+      trashRoot,
+      { withFileTypes: true }
+    );
+
+    const items = [];
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+
+      try {
+        const itemPath =
+          resolveTrashItem(entry.name);
+
+        const metadata = JSON.parse(
+          await fs.promises.readFile(
+            path.join(itemPath, "metadata.json"),
+            "utf8"
+          )
+        );
+
+        items.push(metadata);
+      } catch (error) {
+        console.error(
+          "Invalid trash item:",
+          entry.name,
+          error.message
+        );
+      }
     }
 
-    const filePath = resolveNasPath(req.query.path);
-    const stat = await fs.promises.stat(filePath);
+    items.sort(
+      (left, right) =>
+        new Date(right.deletedAt) -
+        new Date(left.deletedAt)
+    );
+
+    return res.json({ items });
+  } catch (error) {
+    return handleFileError(error, res, next);
+  }
+});
+
+router.post(
+  "/trash/restore",
+  async (req, res, next) => {
+    try {
+      const itemPath =
+        resolveTrashItem(req.body.id);
+
+      const metadata = JSON.parse(
+        await fs.promises.readFile(
+          path.join(itemPath, "metadata.json"),
+          "utf8"
+        )
+      );
+
+      const destinationPath =
+        resolveNasPath(metadata.originalPath);
+
+      if (await pathExists(destinationPath)) {
+        throw createHttpError(
+          409,
+          "The original path is already in use"
+        );
+      }
+
+      await fs.promises.mkdir(
+        path.dirname(destinationPath),
+        { recursive: true }
+      );
+
+      await fs.promises.rename(
+        path.join(itemPath, "content"),
+        destinationPath
+      );
+
+      await fs.promises.rm(
+        itemPath,
+        { recursive: true }
+      );
+
+      return res.json({
+        restored: metadata.originalPath
+      });
+    } catch (error) {
+      return handleFileError(
+        error,
+        res,
+        next
+      );
+    }
+  }
+);
+
+router.delete(
+  "/trash/:id",
+  async (req, res, next) => {
+    try {
+      const itemPath =
+        resolveTrashItem(req.params.id);
+
+      await fs.promises.rm(
+        itemPath,
+        {
+          recursive: true,
+          force: false
+        }
+      );
+
+      return res.status(204).end();
+    } catch (error) {
+      return handleFileError(
+        error,
+        res,
+        next
+      );
+    }
+  }
+);
+
+router.get("/download", async (req, res, next) => {
+  try {
+    if (
+      typeof req.query.path !== "string" ||
+      !req.query.path
+    ) {
+      throw createHttpError(
+        400,
+        "Path is required"
+      );
+    }
+
+    const filePath =
+      resolveNasPath(req.query.path);
+
+    const stat = await getSafeEntry(filePath);
 
     if (!stat.isFile()) {
-      return res.status(400).json({
-        error: "not a file"
-      });
+      throw createHttpError(
+        400,
+        "Requested path is not a file"
+      );
     }
 
     return res.download(filePath);
   } catch (error) {
-    if (error.code === "ENOENT") {
-      return res.status(404).json({
-        error: "file not found"
-      });
-    }
-
-    return next(error);
+    return handleFileError(error, res, next);
   }
 });
 
@@ -241,7 +754,7 @@ router.post(
   "/upload",
   upload.array("files", 5),
   (req, res) => {
-    res.status(201).json({
+    return res.status(201).json({
       uploaded: req.files.map((file) => ({
         name: file.filename,
         size: file.size
