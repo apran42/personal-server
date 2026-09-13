@@ -50,7 +50,8 @@ for LOG_NAME in \
     healthcheck.log \
     trash-cleanup.log \
     log-rotation.log \
-    storage-check.log
+    storage-check.log \
+    nas-history-cleanup.log
 do
     rotate_log "$LOG_DIR/$LOG_NAME"
 done
