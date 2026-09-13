@@ -8,6 +8,8 @@ NAS_DIR="$HOME/storage/shared/NAS"
 
 DATABASE_REMOTE="gcrypt:Database"
 NAS_REMOTE="gcrypt:NAS"
+NAS_HISTORY_REMOTE="gcrypt:NAS-History"
+NAS_HISTORY_TIMESTAMP="$(date '+%Y%m%d-%H%M%S')"
 
 LATEST_BACKUP="$(
     find "$BACKUP_DIR" \
@@ -45,13 +47,17 @@ rclone delete "$DATABASE_REMOTE" \
     --min-age 90d \
     --include 'server-*.db'
 
-echo "Uploading complete NAS contents"
+echo "Synchronizing complete NAS contents"
 
-rclone copy \
+rclone sync \
     "$NAS_DIR" \
     "$NAS_REMOTE" \
+    --backup-dir \
+    "$NAS_HISTORY_REMOTE/$NAS_HISTORY_TIMESTAMP" \
     --exclude '/.Trash/**' \
     --exclude '/.Trash' \
-    --create-empty-src-dirs
+    --create-empty-src-dirs \
+    --max-delete 50 \
+    --check-first
 
 echo "Cloud backup completed."
