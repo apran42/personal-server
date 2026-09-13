@@ -39,7 +39,8 @@ cp -R "$REPO_DIR/public/." "$APP_DIR/public/"
 for SCRIPT in \
     backup-db.sh \
     cloud-backup.sh \
-    cleanup-trash.sh
+    cleanup-trash.sh \
+    run-backup-monitored.sh
 do
     cp \
         "$REPO_DIR/scripts/$SCRIPT" \
@@ -49,7 +50,8 @@ done
 chmod +x \
     "$APP_DIR/scripts/backup-db.sh" \
     "$APP_DIR/scripts/cloud-backup.sh" \
-    "$APP_DIR/scripts/cleanup-trash.sh"
+    "$APP_DIR/scripts/cleanup-trash.sh" \
+    "$APP_DIR/scripts/run-backup-monitored.sh"
 
 echo "6/6 Restarting server"
 
