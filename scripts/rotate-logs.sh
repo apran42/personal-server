@@ -48,7 +48,8 @@ for LOG_NAME in \
     backup.log \
     watchdog.log \
     healthcheck.log \
-    trash-cleanup.log
+    trash-cleanup.log \
+    log-rotation.log
 do
     rotate_log "$LOG_DIR/$LOG_NAME"
 done
