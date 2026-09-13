@@ -45,20 +45,13 @@ rclone delete "$DATABASE_REMOTE" \
     --min-age 90d \
     --include 'server-*.db'
 
-for DIRECTORY in Documents Backups Uploads; do
-    SOURCE="$NAS_DIR/$DIRECTORY"
-    DESTINATION="$NAS_REMOTE/$DIRECTORY"
+echo "Uploading complete NAS contents"
 
-    if [ -d "$SOURCE" ]; then
-        echo "Uploading NAS folder: $DIRECTORY"
-
-        rclone mkdir "$DESTINATION"
-
-        rclone copy \
-            "$SOURCE" \
-            "$DESTINATION" \
-            --create-empty-src-dirs
-    fi
-done
+rclone copy \
+    "$NAS_DIR" \
+    "$NAS_REMOTE" \
+    --exclude '/.Trash/**' \
+    --exclude '/.Trash' \
+    --create-empty-src-dirs
 
 echo "Cloud backup completed."
