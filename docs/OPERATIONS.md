@@ -403,3 +403,50 @@ tail -n 30
 ```
 
 Healthchecks Ping URL은 출력하거나 GitHub에 기록하지 않는다.
+
+## NAS 동기화 및 이전 버전
+
+NAS 원본 경로:
+
+```text
+~/storage/shared/NAS
+```
+
+Google Drive 암호화 원격 저장소:
+
+```text
+gcrypt:NAS
+```
+
+NAS는 `rclone sync`로 동기화한다. 휴대폰에서 수정되거나 삭제된 파일의 기존 클라우드 버전은 즉시 제거하지 않고 다음 경로에 보관한다.
+
+```text
+gcrypt:NAS-History/YYYYMMDD-HHMMSS
+```
+
+보관 정책:
+
+- 현재 NAS 파일은 기간 제한 없이 유지
+- NAS 이전 버전은 90일간 유지
+- 로컬 NAS 휴지통은 30일간 유지
+- 한 번의 동기화에서 50개를 초과하여 삭제하려 하면 작업 중단
+
+이전 버전 목록 확인:
+
+```bash
+rclone lsf gcrypt:NAS-History --recursive
+```
+
+정리 작업 미리 보기:
+
+```bash
+~/apps/myserver/scripts/cleanup-nas-history.sh --dry-run
+```
+
+90일이 지난 이전 버전 실제 정리:
+
+```bash
+~/apps/myserver/scripts/cleanup-nas-history.sh --apply
+```
+
+자동 정리는 매일 오전 4시 5분에 실행된다.
