@@ -40,6 +40,7 @@ Tailscale IP는 Tailscale 앱에서 확인한다.
 
 ~/.config/rclone/rclone.conf
   Google Drive 및 암호화 설정
+```
 
 ## 비밀정보 관리
 
