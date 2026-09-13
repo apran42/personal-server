@@ -6,12 +6,14 @@ const multer = require("multer");
 
 const router = express.Router();
 
-const nasRoot = path.join(
-  process.env.HOME,
-  "storage",
-  "shared",
-  "NAS"
-);
+const nasRoot = process.env.NAS_ROOT
+  ? path.resolve(process.env.NAS_ROOT)
+  : path.join(
+      process.env.HOME,
+      "storage",
+      "shared",
+      "NAS"
+    );
 
 const trashRoot = path.join(nasRoot, ".Trash");
 

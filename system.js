@@ -7,7 +7,14 @@ const router = express.Router();
 
 const homeDirectory = process.env.HOME;
 const appDirectory = path.join(homeDirectory, "apps", "myserver");
-const nasRoot = path.join(homeDirectory, "storage", "shared", "NAS");
+const nasRoot = process.env.NAS_ROOT
+  ? path.resolve(process.env.NAS_ROOT)
+  : path.join(
+      homeDirectory,
+      "storage",
+      "shared",
+      "NAS"
+    );
 const backupDirectory = path.join(appDirectory, "backups");
 const backupLogPath = path.join(appDirectory, "logs", "backup.log");
 

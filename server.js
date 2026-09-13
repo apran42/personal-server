@@ -9,7 +9,13 @@ const app = express();
 
 const host = process.env.HOST || "0.0.0.0";
 const port = Number(process.env.PORT || 8000);
-const databasePath = path.join(__dirname, "data", "server.db");
+const databasePath = process.env.DATABASE_PATH
+  ? path.resolve(process.env.DATABASE_PATH)
+  : path.join(
+      __dirname,
+      "data",
+      "server.db"
+    );
 
 const db = new DatabaseSync(databasePath);
 
