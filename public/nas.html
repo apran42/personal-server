@@ -14,6 +14,15 @@
       box-sizing: border-box;
     }
 
+    #search-input {
+      flex: 1;
+      min-width: 180px;
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font: inherit;
+    }
+
     body {
       max-width: 1000px;
       margin: 0 auto;
@@ -249,6 +258,21 @@
       <div class="toolbar">
         <button id="new-folder-button" type="button">
           새 폴더
+        </button>
+
+        <input
+          id="search-input"
+          type="search"
+          maxlength="100"
+          placeholder="파일 또는 폴더 이름 검색"
+        >
+
+        <button
+          id="search-button"
+          class="secondary"
+          type="button"
+        >
+          검색
         </button>
 
         <input
@@ -542,9 +566,52 @@
       }
     }
 
-    async function loadDirectory(path = currentPath) {
+        async function searchFiles() {
+      const searchInput =
+        document.querySelector("#search-input");
+
+      const query = searchInput.value.trim();
+
+      if (!query) {
+        await loadDirectory(currentPath);
+        return;
+      }
+
       clearMessage();
 
+      try {
+        const parameters = new URLSearchParams({
+          q: query
+        });
+
+        const data = await request(
+          `/nas/search?${parameters}`
+        );
+
+        document.querySelector(
+          "#current-location"
+        ).textContent = `검색: ${data.query}`;
+
+        renderEntries(data.files);
+
+        if (data.truncated) {
+          showMessage(
+            "검색 결과가 많아 처음 100개만 표시합니다.",
+            "error"
+          );
+        } else {
+          showMessage(
+            `${data.files.length}개 항목을 찾았습니다.`
+          );
+        }
+      } catch (error) {
+        showMessage(error.message, "error");
+      }
+    }
+
+    async function loadDirectory(path = currentPath) {
+      clearMessage();
+      document.querySelector("#search-input").value = "";
       try {
         const query = new URLSearchParams({
           path
@@ -929,6 +996,18 @@
     document.querySelector(
       "#trash-refresh-button"
     ).addEventListener("click", loadTrash);
+
+    document.querySelector(
+      "#search-button"
+    ).addEventListener("click", searchFiles);
+
+    document.querySelector(
+      "#search-input"
+    ).addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        searchFiles();
+      }
+    });
 
     filesViewButton.addEventListener(
       "click",

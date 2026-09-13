@@ -113,6 +113,111 @@ async function getSafeEntry(targetPath) {
   return stat;
 }
 
+async function searchNasEntries(query) {
+  const normalizedQuery =
+    query.toLocaleLowerCase("ko-KR");
+
+  const queue = [
+    {
+      absolutePath: nasRoot,
+      relativePath: "",
+      depth: 0
+    }
+  ];
+
+  const results = [];
+  let scannedEntries = 0;
+  const maximumResults = 100;
+  const maximumEntries = 10000;
+  const maximumDepth = 12;
+
+  while (
+    queue.length > 0 &&
+    results.length < maximumResults &&
+    scannedEntries < maximumEntries
+  ) {
+    const current = queue.shift();
+
+    const entries = await fs.promises.readdir(
+      current.absolutePath,
+      { withFileTypes: true }
+    );
+
+    for (const entry of entries) {
+      if (
+        entry.name === ".Trash" ||
+        entry.isSymbolicLink()
+      ) {
+        continue;
+      }
+
+      scannedEntries += 1;
+
+      const absolutePath = path.join(
+        current.absolutePath,
+        entry.name
+      );
+
+      const relativePath = path.posix.join(
+        current.relativePath,
+        entry.name
+      );
+
+      if (
+        entry.name
+          .toLocaleLowerCase("ko-KR")
+          .includes(normalizedQuery)
+      ) {
+        const stat = await fs.promises.lstat(
+          absolutePath
+        );
+
+        results.push({
+          name: entry.name,
+          path: relativePath,
+
+          type: entry.isDirectory()
+            ? "directory"
+            : "file",
+
+          size: entry.isDirectory()
+            ? null
+            : stat.size,
+
+          modifiedAt: stat.mtime.toISOString()
+        });
+
+        if (results.length >= maximumResults) {
+          break;
+        }
+      }
+
+      if (
+        entry.isDirectory() &&
+        current.depth < maximumDepth
+      ) {
+        queue.push({
+          absolutePath,
+          relativePath,
+          depth: current.depth + 1
+        });
+      }
+
+      if (scannedEntries >= maximumEntries) {
+        break;
+      }
+    }
+  }
+
+  return {
+    results,
+
+    truncated:
+      results.length >= maximumResults ||
+      scannedEntries >= maximumEntries
+  };
+}
+
 function handleFileError(error, res, next) {
   if (error.status) {
     return res.status(error.status).json({
@@ -185,6 +290,33 @@ const upload = multer({
   },
 
   defParamCharset: "utf8"
+});
+
+router.get("/search", async (req, res, next) => {
+  try {
+    const query =
+      typeof req.query.q === "string"
+        ? req.query.q.trim()
+        : "";
+
+    if (!query || query.length > 100) {
+      throw createHttpError(
+        400,
+        "Search query must be between 1 and 100 characters"
+      );
+    }
+
+    const searchResult =
+      await searchNasEntries(query);
+
+    return res.json({
+      query,
+      files: searchResult.results,
+      truncated: searchResult.truncated
+    });
+  } catch (error) {
+    return handleFileError(error, res, next);
+  }
 });
 
 router.get("/files", async (req, res, next) => {
