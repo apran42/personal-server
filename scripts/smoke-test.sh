@@ -175,6 +175,47 @@ run_nas_api_tests() {
     echo "NAS API test passed."
 }
 
+run_authentication_limit_test() {
+    BASE_URL="http://127.0.0.1:18000"
+    ATTEMPT_NUMBER=1
+
+    while [ "$ATTEMPT_NUMBER" -le 9 ]; do
+        STATUS_CODE="$(
+            curl \
+                --silent \
+                --output /dev/null \
+                --write-out '%{http_code}' \
+                -u "ci-user:wrong-password" \
+                "$BASE_URL/health"
+        )"
+
+        if [ "$STATUS_CODE" != "401" ]; then
+            echo \
+              "Expected 401 on attempt $ATTEMPT_NUMBER, got $STATUS_CODE."
+            exit 1
+        fi
+
+        ATTEMPT_NUMBER=$((ATTEMPT_NUMBER + 1))
+    done
+
+    STATUS_CODE="$(
+        curl \
+            --silent \
+            --output /dev/null \
+            --write-out '%{http_code}' \
+            -u "ci-user:wrong-password" \
+            "$BASE_URL/health"
+    )"
+
+    if [ "$STATUS_CODE" != "429" ]; then
+        echo \
+          "Expected 429 on attempt 10, got $STATUS_CODE."
+        exit 1
+    fi
+
+    echo "Authentication rate limit test passed."
+}
+
 ATTEMPT=1
 
 while [ "$ATTEMPT" -le 15 ]; do
@@ -186,6 +227,7 @@ while [ "$ATTEMPT" -le 15 ]; do
         echo "$RESPONSE" | grep -q '"status":"ok"'
         echo "Smoke test passed: $RESPONSE"
         run_nas_api_tests
+        run_authentication_limit_test
         exit 0
     fi
 
