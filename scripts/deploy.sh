@@ -40,10 +40,11 @@ for SCRIPT in \
     backup-db.sh \
     cloud-backup.sh \
     cleanup-trash.sh \
+    cleanup-nas-history.sh \
     run-backup-monitored.sh \
     check-server-health.sh \
     rotate-logs.sh \
-    check-storage.sh
+    check-storage.sh \
 do
     cp \
         "$REPO_DIR/scripts/$SCRIPT" \
@@ -54,6 +55,7 @@ chmod +x \
     "$APP_DIR/scripts/backup-db.sh" \
     "$APP_DIR/scripts/cloud-backup.sh" \
     "$APP_DIR/scripts/cleanup-trash.sh" \
+    "$APP_DIR/scripts/cleanup-nas-history.sh" \
     "$APP_DIR/scripts/run-backup-monitored.sh" \
     "$APP_DIR/scripts/check-server-health.sh" \
     "$APP_DIR/scripts/rotate-logs.sh" \
