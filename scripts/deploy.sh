@@ -36,12 +36,20 @@ done
 mkdir -p "$APP_DIR/public" "$APP_DIR/scripts" "$APP_DIR/logs"
 
 cp -R "$REPO_DIR/public/." "$APP_DIR/public/"
-cp "$REPO_DIR/scripts/backup-db.sh" "$APP_DIR/scripts/backup-db.sh"
-cp "$REPO_DIR/scripts/cloud-backup.sh" "$APP_DIR/scripts/cloud-backup.sh"
+for SCRIPT in \
+    backup-db.sh \
+    cloud-backup.sh \
+    cleanup-trash.sh
+do
+    cp \
+        "$REPO_DIR/scripts/$SCRIPT" \
+        "$APP_DIR/scripts/$SCRIPT"
+done
 
 chmod +x \
     "$APP_DIR/scripts/backup-db.sh" \
-    "$APP_DIR/scripts/cloud-backup.sh"
+    "$APP_DIR/scripts/cloud-backup.sh" \
+    "$APP_DIR/scripts/cleanup-trash.sh"
 
 echo "6/6 Restarting server"
 
