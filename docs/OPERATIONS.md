@@ -450,3 +450,39 @@ rclone lsf gcrypt:NAS-History --recursive
 ```
 
 자동 정리는 매일 오전 4시 5분에 실행된다.
+## 클라우드 DB 복원 점검
+
+클라우드 백업 목록 확인:
+
+```bash
+rclone lsl gcrypt:Database
+```
+
+운영 DB를 건드리지 않고 최신 백업을 임시 경로에서 검사:
+
+```bash
+RESTORE_DIR="$(mktemp -d)"
+LATEST_DB="$(rclone lsf gcrypt:Database | grep '^server-.*\.db$' | sort | tail -n 1)"
+
+rclone copyto \
+  "gcrypt:Database/$LATEST_DB" \
+  "$RESTORE_DIR/restored.db"
+
+sqlite3 "$RESTORE_DIR/restored.db" "PRAGMA integrity_check;"
+sqlite3 "$RESTORE_DIR/restored.db" \
+  "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;"
+```
+
+정상 기준:
+
+- 무결성 검사 결과가 `ok`
+- 테이블 목록에 `notes`가 표시됨
+
+검사 후 임시 파일 정리:
+
+```bash
+rm -f "$RESTORE_DIR/restored.db"
+rmdir "$RESTORE_DIR"
+```
+
+운영 DB를 실제로 복원할 때는 서버를 먼저 중지하고 기존 DB를 별도로 보관한 후 진행한다.
