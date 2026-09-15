@@ -12,13 +12,13 @@ Tailscale IP는 Tailscale 앱에서 확인한다.
 
 ## 서비스
 
-| 서비스 | 포트 | 주소 |
-|---|---:|---|
-| 개인 대시보드 | 8000 | `http://TAILSCALE_IP:8000` |
-| NAS | 8000 | `http://TAILSCALE_IP:8000/nas.html` |
-| 서버 상태 | 8000 | `http://TAILSCALE_IP:8000/system.html` |
-| code-server | 8080 | `http://TAILSCALE_IP:8080` |
-| SSH/SFTP | 8022 | `TAILSCALE_IP:8022` |
+| 서비스        | 포트 | 주소                                   |
+| ------------- | ---: | -------------------------------------- |
+| 개인 대시보드 | 8000 | `http://TAILSCALE_IP:8000`             |
+| NAS           | 8000 | `http://TAILSCALE_IP:8000/nas.html`    |
+| 서버 상태     | 8000 | `http://TAILSCALE_IP:8000/system.html` |
+| code-server   | 8080 | `http://TAILSCALE_IP:8080`             |
+| SSH/SFTP      | 8022 | `TAILSCALE_IP:8022`                    |
 
 ## 주요 경로
 
@@ -46,14 +46,14 @@ Tailscale IP는 Tailscale 앱에서 확인한다.
 
 실제 비밀번호, 인증 URL, 암호화 키는 Git 저장소에 기록하지 않는다.
 
-| 항목 | 저장 위치 |
-|---|---|
-| 운영 서버 계정 | `~/apps/myserver/.env` |
-| 개발 환경 계정 | `~/projects/note10-personal-server/.env` |
-| code-server 인증 | `~/.config/code-server/config.yaml` |
-| rclone 및 Google Drive | `~/.config/rclone/rclone.conf` |
-| Healthchecks Ping URL | `~/.config/myserver/healthchecks.env` |
-| SSH 개인키 | 접속하는 PC의 사용자 `.ssh` 폴더 |
+| 항목                   | 저장 위치                                |
+| ---------------------- | ---------------------------------------- |
+| 운영 서버 계정         | `~/apps/myserver/.env`                   |
+| 개발 환경 계정         | `~/projects/note10-personal-server/.env` |
+| code-server 인증       | `~/.config/code-server/config.yaml`      |
+| rclone 및 Google Drive | `~/.config/rclone/rclone.conf`           |
+| Healthchecks Ping URL  | `~/.config/myserver/healthchecks.env`    |
+| SSH 개인키             | 접속하는 PC의 사용자 `.ssh` 폴더         |
 
 비밀 설정 파일의 권한은 소유자만 읽고 쓸 수 있도록 유지한다.
 
@@ -64,7 +64,7 @@ chmod 600 \
   ~/.config/code-server/config.yaml \
   ~/.config/rclone/rclone.conf \
   ~/.config/myserver/healthchecks.env
-  ```
+```
 
 다음 값은 별도의 비밀번호 관리자에 보관한다.
 
@@ -75,6 +75,7 @@ chmod 600 \
 - Healthchecks Ping URL
 
 `.env`, 데이터베이스, 로그, 백업 파일은 GitHub에 커밋하지 않는다.
+
 ## 개발 및 배포
 
 개발 작업은 Git 저장소에서 수행한다.
@@ -124,18 +125,19 @@ Deployment completed successfully.
 4. Node.js 의존성 설치
 5. 운영 경로에 코드 복사
 6. 서버 재시작 및 상태 검사
+
 ## 자동 작업
 
 Termux의 `crond`가 다음 작업을 실행한다.
 
-| 시각 | 작업 | 스크립트 |
-|---|---|---|
-| 5분마다 | 서버 및 code-server 자동 복구 | `~/.termux/boot/start-server` |
-| 5분마다 | 서버 상태 확인 및 외부 생존 신호 | `check-server-health.sh` |
-| 매시 15분 | 저장공간 사용률 확인 | `check-storage.sh` |
-| 매일 03:30 | DB 및 NAS 암호화 백업 | `run-backup-monitored.sh` |
-| 매일 04:00 | 30일 지난 휴지통 정리 | `cleanup-trash.sh` |
-| 매일 04:10 | 5MB 이상 로그 회전 | `rotate-logs.sh` |
+| 시각       | 작업                             | 스크립트                      |
+| ---------- | -------------------------------- | ----------------------------- |
+| 5분마다    | 서버 및 code-server 자동 복구    | `~/.termux/boot/start-server` |
+| 5분마다    | 서버 상태 확인 및 외부 생존 신호 | `check-server-health.sh`      |
+| 매시 15분  | 저장공간 사용률 확인             | `check-storage.sh`            |
+| 매일 03:30 | DB 및 NAS 암호화 백업            | `run-backup-monitored.sh`     |
+| 매일 04:00 | 30일 지난 휴지통 정리            | `cleanup-trash.sh`            |
+| 매일 04:10 | 5MB 이상 로그 회전               | `rotate-logs.sh`              |
 
 현재 일정을 확인한다.
 
@@ -151,16 +153,16 @@ pgrep -af crond
 
 ## 로그 확인
 
-| 로그 | 내용 |
-|---|---|
-| `server.log` | Node.js 서버 실행 기록 |
-| `code-server.log` | code-server 실행 기록 |
-| `backup.log` | 로컬 및 클라우드 백업 결과 |
-| `watchdog.log` | 서비스 자동 복구 기록 |
-| `healthcheck.log` | 서버 생존 확인 결과 |
-| `storage-check.log` | 저장공간 확인 결과 |
-| `trash-cleanup.log` | 휴지통 자동 정리 결과 |
-| `log-rotation.log` | 로그 회전 결과 |
+| 로그                | 내용                       |
+| ------------------- | -------------------------- |
+| `server.log`        | Node.js 서버 실행 기록     |
+| `code-server.log`   | code-server 실행 기록      |
+| `backup.log`        | 로컬 및 클라우드 백업 결과 |
+| `watchdog.log`      | 서비스 자동 복구 기록      |
+| `healthcheck.log`   | 서버 생존 확인 결과        |
+| `storage-check.log` | 저장공간 확인 결과         |
+| `trash-cleanup.log` | 휴지통 자동 정리 결과      |
+| `log-rotation.log`  | 로그 회전 결과             |
 
 최근 로그는 다음 명령으로 확인한다.
 
@@ -169,6 +171,7 @@ tail -n 50 ~/apps/myserver/logs/파일명.log
 ```
 
 로그 파일은 5MB를 넘으면 회전하며 이전 로그 3개까지 보관한다.
+
 ## 백업 확인
 
 백업은 매일 03:30에 자동 실행된다.
@@ -283,6 +286,7 @@ find ~/nas-restore-test -type f
 ```
 
 복구본을 확인한 뒤 필요한 파일만 원래 NAS 경로로 복사한다. 기존 NAS 전체를 검증 없이 덮어쓰지 않는다.
+
 ## 장애 대응
 
 ### 웹 서버에 접속되지 않을 때
@@ -450,6 +454,7 @@ rclone lsf gcrypt:NAS-History --recursive
 ```
 
 자동 정리는 매일 오전 4시 5분에 실행된다.
+
 ## 클라우드 DB 복원 점검
 
 클라우드 백업 목록 확인:

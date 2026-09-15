@@ -18,7 +18,7 @@ cleanup() {
     fi
 
     if [ -n "${TEST_DIRECTORY:-}" ] &&
-       [ -d "$TEST_DIRECTORY" ]; then
+        [ -d "$TEST_DIRECTORY" ]; then
         rm -rf -- "$TEST_DIRECTORY"
     fi
 }
@@ -28,16 +28,14 @@ trap cleanup EXIT INT TERM
 cd "$REPO_DIR"
 
 SERVER_USERNAME="ci-user" \
-SERVER_PASSWORD="ci-password" \
-HOST="127.0.0.1" \
-PORT="18000" \
-NAS_ROOT="$TEST_NAS" \
-DATABASE_PATH="$TEST_DATABASE" \
-node server.js >"$LOG_FILE" 2>&1 &
+    SERVER_PASSWORD="ci-password" \
+    HOST="127.0.0.1" \
+    PORT="18000" \
+    NAS_ROOT="$TEST_NAS" \
+    DATABASE_PATH="$TEST_DATABASE" \
+    node server.js >"$LOG_FILE" 2>&1 &
 
 SERVER_PID="$!"
-
-
 
 run_nas_api_tests() {
     BASE_URL="http://127.0.0.1:18000"
@@ -46,7 +44,7 @@ run_nas_api_tests() {
     UPLOAD_FILE="$TEST_DIRECTORY/ci-upload.txt"
     DOWNLOAD_FILE="$TEST_DIRECTORY/ci-download.txt"
 
-    printf 'NAS API test\n' > "$UPLOAD_FILE"
+    printf 'NAS API test\n' >"$UPLOAD_FILE"
 
     curl -fs \
         -u "$AUTHENTICATION" \
@@ -77,7 +75,7 @@ run_nas_api_tests() {
 
     cmp "$UPLOAD_FILE" "$DOWNLOAD_FILE"
 
-        curl -fs \
+    curl -fs \
         -u "$AUTHENTICATION" \
         -X PATCH \
         -H "Content-Type: application/json" \
@@ -182,7 +180,7 @@ run_resource_api_tests() {
     RESOURCE_FILE="$RESOURCE_DIRECTORY/lecture.pdf"
 
     mkdir -p "$RESOURCE_DIRECTORY"
-    printf 'Resource archive test\n' > "$RESOURCE_FILE"
+    printf 'Resource archive test\n' >"$RESOURCE_FILE"
 
     CREATE_RESPONSE="$(
         curl -fs \
@@ -245,13 +243,13 @@ run_resource_api_tests() {
         grep -q '"tags":\["linux","server","ubuntu"\]'
 
     FILTER_RESPONSE="$(
-    curl -fs \
-        -u "$AUTHENTICATION" \
-        -G \
-        --data-urlencode "q=ubuntu" \
-        --data-urlencode "category=System Server Operations" \
-        --data-urlencode "semester=2026-2" \
-        "$BASE_URL/resources"
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            -G \
+            --data-urlencode "q=ubuntu" \
+            --data-urlencode "category=System Server Operations" \
+            --data-urlencode "semester=2026-2" \
+            "$BASE_URL/resources"
     )"
 
     FILTERED_ID="$(
@@ -306,10 +304,10 @@ run_resource_api_tests() {
         exit 1
     fi
     DELETE_RESPONSE="$(
-    curl -fs \
-        -u "$AUTHENTICATION" \
-        -X DELETE \
-        "$BASE_URL/resources/$RESOURCE_ID"
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            -X DELETE \
+            "$BASE_URL/resources/$RESOURCE_ID"
     )"
 
     printf '%s' "$DELETE_RESPONSE" |
@@ -371,7 +369,7 @@ run_authentication_limit_test() {
 
         if [ "$STATUS_CODE" != "401" ]; then
             echo \
-              "Expected 401 on attempt $ATTEMPT_NUMBER, got $STATUS_CODE."
+                "Expected 401 on attempt $ATTEMPT_NUMBER, got $STATUS_CODE."
             exit 1
         fi
 
@@ -389,7 +387,7 @@ run_authentication_limit_test() {
 
     if [ "$STATUS_CODE" != "429" ]; then
         echo \
-          "Expected 429 on attempt 10, got $STATUS_CODE."
+            "Expected 429 on attempt 10, got $STATUS_CODE."
         exit 1
     fi
 

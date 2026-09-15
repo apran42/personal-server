@@ -44,8 +44,7 @@ for SCRIPT in \
     run-backup-monitored.sh \
     check-server-health.sh \
     rotate-logs.sh \
-    check-storage.sh 
-do
+    check-storage.sh; do
     cp \
         "$REPO_DIR/scripts/$SCRIPT" \
         "$APP_DIR/scripts/$SCRIPT"

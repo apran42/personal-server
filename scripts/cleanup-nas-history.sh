@@ -17,30 +17,30 @@ echo "Retention: $RETENTION_DAYS days"
 echo "Cutoff: $CUTOFF"
 
 rclone lsf "$NAS_HISTORY_REMOTE" --dirs-only 2>/dev/null |
-while IFS= read -r DIRECTORY; do
-    TIMESTAMP="${DIRECTORY%/}"
+    while IFS= read -r DIRECTORY; do
+        TIMESTAMP="${DIRECTORY%/}"
 
-    case "$TIMESTAMP" in
-        ????????-??????) ;;
-        *)
-            echo "Skipping unexpected directory: $DIRECTORY"
-            continue
-            ;;
-    esac
+        case "$TIMESTAMP" in
+            ????????-??????) ;;
+            *)
+                echo "Skipping unexpected directory: $DIRECTORY"
+                continue
+                ;;
+        esac
 
-    OLDEST="$(
-        printf '%s\n%s\n' "$TIMESTAMP" "$CUTOFF" |
-        sort |
-        head -n 1
-    )"
+        OLDEST="$(
+            printf '%s\n%s\n' "$TIMESTAMP" "$CUTOFF" |
+                sort |
+                head -n 1
+        )"
 
-    if [ "$OLDEST" = "$TIMESTAMP" ] && [ "$TIMESTAMP" != "$CUTOFF" ]; then
-        echo "Expired: $NAS_HISTORY_REMOTE/$TIMESTAMP"
+        if [ "$OLDEST" = "$TIMESTAMP" ] && [ "$TIMESTAMP" != "$CUTOFF" ]; then
+            echo "Expired: $NAS_HISTORY_REMOTE/$TIMESTAMP"
 
-        if [ "$MODE" = "--apply" ]; then
-            rclone purge "$NAS_HISTORY_REMOTE/$TIMESTAMP"
+            if [ "$MODE" = "--apply" ]; then
+                rclone purge "$NAS_HISTORY_REMOTE/$TIMESTAMP"
+            fi
         fi
-    fi
-done
+    done
 
 echo "NAS history cleanup completed."

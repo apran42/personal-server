@@ -122,8 +122,8 @@ function createResourcesRouter(db) {
   }
 
   const nasRoot = path.resolve(
-  process.env.NAS_ROOT ||
-    path.join(process.env.HOME, "storage", "shared", "NAS")
+    process.env.NAS_ROOT ||
+      path.join(process.env.HOME, "storage", "shared", "NAS")
   );
 
   db.exec(`
@@ -149,28 +149,24 @@ function createResourcesRouter(db) {
   const router = express.Router();
 
   router.get("/", (req, res, next) => {
-  try {
-    const query = cleanText(req.query.q, 100);
-    const category = cleanText(req.query.category, 100);
-    const semester = cleanText(req.query.semester, 50);
+    try {
+      const query = cleanText(req.query.q, 100);
+      const category = cleanText(req.query.category, 100);
+      const semester = cleanText(req.query.semester, 50);
 
-    if (
-      query === null ||
-      category === null ||
-      semester === null
-    ) {
-      return res.status(400).json({
-        error: "invalid resource filters"
-      });
-    }
+      if (query === null || category === null || semester === null) {
+        return res.status(400).json({
+          error: "invalid resource filters"
+        });
+      }
 
-    const conditions = [];
-    const parameters = [];
+      const conditions = [];
+      const parameters = [];
 
-    if (query) {
-      const pattern = `%${escapeLike(query)}%`;
+      if (query) {
+        const pattern = `%${escapeLike(query)}%`;
 
-      conditions.push(`
+        conditions.push(`
         (
           display_name LIKE ? ESCAPE '\\'
           OR file_path LIKE ? ESCAPE '\\'
@@ -179,26 +175,25 @@ function createResourcesRouter(db) {
         )
       `);
 
-      parameters.push(pattern, pattern, pattern, pattern);
-    }
+        parameters.push(pattern, pattern, pattern, pattern);
+      }
 
-    if (category) {
-      conditions.push("category = ? COLLATE NOCASE");
-      parameters.push(category);
-    }
+      if (category) {
+        conditions.push("category = ? COLLATE NOCASE");
+        parameters.push(category);
+      }
 
-    if (semester) {
-      conditions.push("semester = ? COLLATE NOCASE");
-      parameters.push(semester);
-    }
+      if (semester) {
+        conditions.push("semester = ? COLLATE NOCASE");
+        parameters.push(semester);
+      }
 
-    const whereClause =
-      conditions.length > 0
-        ? `WHERE ${conditions.join(" AND ")}`
-        : "";
+      const whereClause =
+        conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-    const resources = db
-      .prepare(`
+      const resources = db
+        .prepare(
+          `
         SELECT
           id,
           file_path,
@@ -212,66 +207,68 @@ function createResourcesRouter(db) {
         FROM resources
         ${whereClause}
         ORDER BY updated_at DESC, id DESC
-      `)
-      .all(...parameters)
-      .map((resource) => ({
-        ...resource,
-        tags: parseTags(resource.tags)
-      }));
+      `
+        )
+        .all(...parameters)
+        .map((resource) => ({
+          ...resource,
+          tags: parseTags(resource.tags)
+        }));
 
-    return res.json({
-      query: query || "",
-      category: category || "",
-      semester: semester || "",
-      resources
-    });
-  } catch (error) {
-    next(error);
-  }
+      return res.json({
+        query: query || "",
+        category: category || "",
+        semester: semester || "",
+        resources
+      });
+    } catch (error) {
+      next(error);
+    }
   });
 
   router.post("/", (req, res, next) => {
-  try {
-    const filePath = cleanFilePath(req.body.filePath);
-    const displayName = cleanText(req.body.displayName, 200);
-    const category = cleanText(req.body.category, 100);
-    const semester = cleanText(req.body.semester, 50);
-    const description = cleanText(req.body.description, 2000);
-    const tags = cleanTags(req.body.tags);
+    try {
+      const filePath = cleanFilePath(req.body.filePath);
+      const displayName = cleanText(req.body.displayName, 200);
+      const category = cleanText(req.body.category, 100);
+      const semester = cleanText(req.body.semester, 50);
+      const description = cleanText(req.body.description, 2000);
+      const tags = cleanTags(req.body.tags);
 
-    if (
-      !filePath ||
-      !displayName ||
-      category === null ||
-      semester === null ||
-      description === null ||
-      tags === null
-    ) {
-      return res.status(400).json({
-        error: "invalid resource data"
-      });
-    }
+      if (
+        !filePath ||
+        !displayName ||
+        category === null ||
+        semester === null ||
+        description === null ||
+        tags === null
+      ) {
+        return res.status(400).json({
+          error: "invalid resource data"
+        });
+      }
 
-    const fileError = validateNasFile(nasRoot, filePath);
+      const fileError = validateNasFile(nasRoot, filePath);
 
-    if (fileError) {
-      return res.status(fileError.status).json({
-        error: fileError.error
-      });
-    }
+      if (fileError) {
+        return res.status(fileError.status).json({
+          error: fileError.error
+        });
+      }
 
-    const existing = db
-      .prepare("SELECT id FROM resources WHERE file_path = ?")
-      .get(filePath);
+      const existing = db
+        .prepare("SELECT id FROM resources WHERE file_path = ?")
+        .get(filePath);
 
-    if (existing) {
-      return res.status(409).json({
-        error: "resource already exists for this file"
-      });
-    }
+      if (existing) {
+        return res.status(409).json({
+          error: "resource already exists for this file"
+        });
+      }
 
-    const result = db
-      .prepare(`
+      const result = db
+        .prepare(
+          `
         INSERT INTO resources (
           file_path,
           display_name,
@@ -281,18 +278,20 @@ function createResourcesRouter(db) {
           description
         )
         VALUES (?, ?, ?, ?, ?, ?)
-      `)
-      .run(
-        filePath,
-        displayName,
-        category,
-        semester,
-        JSON.stringify(tags),
-        description
-      );
+      `
+        )
+        .run(
+          filePath,
+          displayName,
+          category,
+          semester,
+          JSON.stringify(tags),
+          description
+        );
 
-    const resource = db
-      .prepare(`
+      const resource = db
+        .prepare(
+          `
         SELECT
           id,
           file_path,
@@ -305,16 +304,17 @@ function createResourcesRouter(db) {
           updated_at
         FROM resources
         WHERE id = ?
-      `)
-      .get(result.lastInsertRowid);
+      `
+        )
+        .get(result.lastInsertRowid);
 
-    return res.status(201).json({
-      ...resource,
-      tags: parseTags(resource.tags)
-    });
-  } catch (error) {
-    next(error);
-  }
+      return res.status(201).json({
+        ...resource,
+        tags: parseTags(resource.tags)
+      });
+    } catch (error) {
+      next(error);
+    }
   });
 
   router.patch("/:id", (req, res, next) => {
@@ -328,7 +328,8 @@ function createResourcesRouter(db) {
       }
 
       const existing = db
-        .prepare(`
+        .prepare(
+          `
           SELECT
             id,
             file_path,
@@ -341,7 +342,8 @@ function createResourcesRouter(db) {
             updated_at
           FROM resources
           WHERE id = ?
-        `)
+        `
+        )
         .get(id);
 
       if (!existing) {
@@ -413,11 +415,13 @@ function createResourcesRouter(db) {
       }
 
       const pathOwner = db
-        .prepare(`
+        .prepare(
+          `
           SELECT id
           FROM resources
           WHERE file_path = ? AND id != ?
-        `)
+        `
+        )
         .get(filePath, id);
 
       if (pathOwner) {
@@ -426,7 +430,8 @@ function createResourcesRouter(db) {
         });
       }
 
-      db.prepare(`
+      db.prepare(
+        `
         UPDATE resources
         SET
           file_path = ?,
@@ -437,7 +442,8 @@ function createResourcesRouter(db) {
           description = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `).run(
+      `
+      ).run(
         filePath,
         displayName,
         category,
@@ -448,7 +454,8 @@ function createResourcesRouter(db) {
       );
 
       const resource = db
-        .prepare(`
+        .prepare(
+          `
           SELECT
             id,
             file_path,
@@ -461,7 +468,8 @@ function createResourcesRouter(db) {
             updated_at
           FROM resources
           WHERE id = ?
-        `)
+        `
+        )
         .get(id);
 
       return res.json({
@@ -473,45 +481,47 @@ function createResourcesRouter(db) {
     }
   });
 
-router.delete("/:id", (req, res, next) => {
-  try {
-    const id = Number(req.params.id);
+  router.delete("/:id", (req, res, next) => {
+    try {
+      const id = Number(req.params.id);
 
-    if (!Number.isInteger(id) || id < 1) {
-      return res.status(400).json({
-        error: "invalid resource id"
-      });
-    }
+      if (!Number.isInteger(id) || id < 1) {
+        return res.status(400).json({
+          error: "invalid resource id"
+        });
+      }
 
-    const resource = db
-      .prepare(`
+      const resource = db
+        .prepare(
+          `
         SELECT id, file_path, display_name
         FROM resources
         WHERE id = ?
-      `)
-      .get(id);
+      `
+        )
+        .get(id);
 
-    if (!resource) {
-      return res.status(404).json({
-        error: "resource not found"
+      if (!resource) {
+        return res.status(404).json({
+          error: "resource not found"
+        });
+      }
+
+      db.prepare("DELETE FROM resources WHERE id = ?").run(id);
+
+      return res.json({
+        deleted: true,
+        resource: {
+          id: resource.id,
+          file_path: resource.file_path,
+          display_name: resource.display_name
+        },
+        file_deleted: false
       });
+    } catch (error) {
+      next(error);
     }
-
-    db.prepare("DELETE FROM resources WHERE id = ?").run(id);
-
-    return res.json({
-      deleted: true,
-      resource: {
-        id: resource.id,
-        file_path: resource.file_path,
-        display_name: resource.display_name
-      },
-      file_deleted: false
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+  });
 
   return router;
 }

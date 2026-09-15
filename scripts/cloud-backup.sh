@@ -16,8 +16,8 @@ LATEST_BACKUP="$(
         -type f \
         -name 'server-*.db' \
         -print |
-    sort |
-    tail -n 1
+        sort |
+        tail -n 1
 )"
 
 if [ -z "$LATEST_BACKUP" ]; then
