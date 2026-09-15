@@ -555,7 +555,29 @@ function resetResourceForm() {
   document.querySelector("#save-button").textContent = "저장";
   document.querySelector("#cancel-button").classList.add("hidden");
 }
+function applyRegistrationParameters() {
+  const parameters = new URLSearchParams(window.location.search);
+  const filePath = parameters.get("filePath");
+  const displayName = parameters.get("displayName");
 
+  if (!filePath) {
+    return;
+  }
+
+  document.querySelector("#file-path").value = filePath;
+  document.querySelector("#display-name").value =
+    displayName || filePath.split("/").pop() || "";
+
+  document.querySelector("#form-title").textContent =
+    "NAS 파일 자료 등록";
+
+  form.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+
+  window.history.replaceState({}, "", "/resources.html");
+}
 function getResourceFormData() {
   const tags = document
     .querySelector("#tags")
@@ -647,6 +669,7 @@ form.addEventListener("submit", saveResource);
 document.querySelector(
   "#cancel-button"
 ).addEventListener("click", resetResourceForm);
+applyRegistrationParameters();
   loadResources();
 </script>
 </body>
