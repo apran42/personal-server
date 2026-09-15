@@ -476,7 +476,15 @@
         container.append(button);
       }
     }
+function openResourceRegistration(entry) {
+  const parameters = new URLSearchParams({
+    filePath: entry.path,
+    displayName: entry.name
+  });
 
+  window.location.href =
+    `/resources.html?${parameters.toString()}`;
+}
     function renderEntries(files) {
       const container =
         document.querySelector("#entry-list");
@@ -541,7 +549,15 @@
           document.createElement("div");
 
         actions.className = "actions";
-
+        if (entry.type === "file") {
+  actions.append(
+    createButton(
+      "자료 등록",
+      "",
+      () => openResourceRegistration(entry)
+    )
+  );
+}
         actions.append(
           createButton(
             "이름 변경",
