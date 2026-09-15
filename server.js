@@ -1,6 +1,7 @@
 const systemRouter = require("./system");
 const nasRouter = require("./nas");
 const basicAuth = require("./auth");
+const createResourcesRouter = require("./resources");
 const express = require("express");
 const path = require("path");
 const { DatabaseSync } = require("node:sqlite");
@@ -18,6 +19,7 @@ const databasePath = process.env.DATABASE_PATH
     );
 
 const db = new DatabaseSync(databasePath);
+const resourcesRouter = createResourcesRouter(db);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS notes (
@@ -33,6 +35,7 @@ app.use(express.json({ limit: "100kb" }));
 app.use(basicAuth);
 app.use("/nas", nasRouter);
 app.use("/system", systemRouter);
+app.use("/resources", resourcesRouter);
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
@@ -42,7 +45,11 @@ app.get("/", (req, res) => {
       "GET /health",
       "GET /notes",
       "POST /notes",
-      "DELETE /notes/:id"
+      "DELETE /notes/:id",
+      "GET /resources",
+      "POST /resources",
+      "PATCH /resources/:id",
+      "DELETE /resources/:id"
     ]
   });
 });

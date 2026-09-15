@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+  <title>개발자료 아카이브</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 24px;
+      color: #1f2937;
+      background: #f3f4f6;
+      font-family: system-ui, sans-serif;
+    }
+
+    header,
+    .panel,
+    .resource {
+      padding: 18px;
+      margin-bottom: 16px;
+      border-radius: 12px;
+      background: white;
+      box-shadow: 0 2px 8px #00000012;
+    }
+
+    header {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    h1,
+    h2 {
+      margin-top: 0;
+    }
+
+    nav,
+    .toolbar,
+    .actions,
+    .form-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    a {
+      color: #2563eb;
+    }
+
+    form {
+      display: grid;
+      gap: 12px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-weight: 600;
+    }
+
+    input,
+    textarea,
+    button {
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font: inherit;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    button {
+      border: 0;
+      color: white;
+      background: #2563eb;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      color: #1f2937;
+      background: #e5e7eb;
+    }
+
+    button.danger {
+      background: #dc2626;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    .toolbar input {
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .resource-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .resource {
+      margin-bottom: 0;
+    }
+
+    .resource-header {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .resource-title {
+      margin: 0;
+    }
+
+    .resource-path,
+    .resource-meta,
+    .resource-description {
+      margin-top: 8px;
+      color: #6b7280;
+      overflow-wrap: anywhere;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 8px;
+      margin: 6px 4px 0 0;
+      border-radius: 999px;
+      color: #1d4ed8;
+      background: #dbeafe;
+      font-size: 13px;
+    }
+
+    #message {
+      min-height: 24px;
+      margin-bottom: 12px;
+    }
+
+    .success {
+      color: #047857;
+    }
+
+    .error {
+      color: #dc2626;
+    }
+
+    .empty {
+      padding: 32px;
+      color: #6b7280;
+      text-align: center;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 12px;
+      }
+
+      header,
+      .resource-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div>
+      <h1>개발자료 아카이브</h1>
+      <div>NAS 파일에 과목·학기·태그를 연결합니다.</div>
+    </div>
+
+    <nav>
+      <a href="/">메모</a>
+      <a href="/nas.html">NAS</a>
+      <a href="/system.html">서버 상태</a>
+    </nav>
+  </header>
+
+  <div id="message"></div>
+
+  <section class="panel">
+    <h2 id="form-title">자료 등록</h2>
+
+    <form id="resource-form">
+      <input id="resource-id" type="hidden">
+
+      <div class="form-grid">
+        <label>
+          NAS 파일 경로
+          <input
+            id="file-path"
+            maxlength="500"
+            placeholder="예: Documents/Linux/lecture.pdf"
+            required
+          >
+        </label>
+
+        <label>
+          표시 이름
+          <input
+            id="display-name"
+            maxlength="200"
+            required
+          >
+        </label>
+
+        <label>
+          과목 또는 분류
+          <input id="category" maxlength="100">
+        </label>
+
+        <label>
+          학기
+          <input
+            id="semester"
+            maxlength="50"
+            placeholder="예: 2026-2"
+          >
+        </label>
+      </div>
+
+      <label>
+        태그
+        <input
+          id="tags"
+          placeholder="linux, ubuntu, server"
+        >
+      </label>
+
+      <label>
+        설명
+        <textarea id="description" maxlength="2000"></textarea>
+      </label>
+
+      <div class="form-actions">
+        <button id="save-button" type="submit">
+          저장
+        </button>
+
+        <button
+          id="cancel-button"
+          class="secondary hidden"
+          type="button"
+        >
+          수정 취소
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="toolbar">
+      <input
+        id="search"
+        type="search"
+        maxlength="100"
+        placeholder="이름·경로·설명·태그 검색"
+      >
+
+      <input
+        id="filter-category"
+        maxlength="100"
+        placeholder="과목"
+      >
+
+      <input
+        id="filter-semester"
+        maxlength="50"
+        placeholder="학기"
+      >
+
+      <button id="search-button" type="button">
+        검색
+      </button>
+
+      <button
+        id="reset-button"
+        class="secondary"
+        type="button"
+      >
+        초기화
+      </button>
+    </div>
+
+    <div id="resource-list" class="resource-list">
+      <div class="empty">자료를 불러오는 중...</div>
+    </div>
+  </section>
+
+  <script>
+  const form = document.querySelector("#resource-form");
+  const listElement = document.querySelector("#resource-list");
+  const messageElement = document.querySelector("#message");
+
+  function showMessage(message, type = "success") {
+    messageElement.textContent = message;
+    messageElement.className = type;
+  }
+
+  function clearMessage() {
+    messageElement.textContent = "";
+    messageElement.className = "";
+  }
+
+  function formatDate(value) {
+    if (!value) {
+      return "-";
+    }
+
+    const normalized = value.includes("T")
+      ? value
+      : `${value.replace(" ", "T")}Z`;
+
+    return new Date(normalized).toLocaleString("ko-KR");
+  }
+
+  async function request(url, options = {}) {
+    const response = await fetch(url, options);
+    const contentType =
+      response.headers.get("content-type") || "";
+
+    const body = contentType.includes("application/json")
+      ? await response.json()
+      : await response.text();
+
+    if (!response.ok) {
+      const message =
+        typeof body === "object" && body.error
+          ? body.error
+          : "요청을 처리하지 못했습니다.";
+
+      throw new Error(message);
+    }
+
+    return body;
+  }
+
+  function createButton(text, className, clickHandler) {
+    const button = document.createElement("button");
+
+    button.type = "button";
+    button.textContent = text;
+    button.className = className;
+    button.addEventListener("click", clickHandler);
+
+    return button;
+  }
+
+  function renderResources(resources) {
+    listElement.replaceChildren();
+
+    if (resources.length === 0) {
+      const empty = document.createElement("div");
+
+      empty.className = "empty";
+      empty.textContent = "등록된 자료가 없습니다.";
+      listElement.append(empty);
+      return;
+    }
+
+    for (const resource of resources) {
+      const article = document.createElement("article");
+      article.className = "resource";
+
+      const header = document.createElement("div");
+      header.className = "resource-header";
+
+      const information = document.createElement("div");
+
+      const title = document.createElement("h3");
+      title.className = "resource-title";
+      title.textContent = resource.display_name;
+
+      const fileLink = document.createElement("a");
+      fileLink.className = "resource-path";
+      fileLink.textContent = resource.file_path;
+      fileLink.href =
+        `/nas/download?path=${encodeURIComponent(resource.file_path)}`;
+
+      const metadata = document.createElement("div");
+      metadata.className = "resource-meta";
+      metadata.textContent = [
+        resource.category || "분류 없음",
+        resource.semester || "학기 없음",
+        `수정 ${formatDate(resource.updated_at)}`
+      ].join(" · ");
+
+      information.append(title, fileLink, metadata);
+      const actions = document.createElement("div");
+actions.className = "actions";
+
+actions.append(
+  createButton(
+    "수정",
+    "secondary",
+    () => editResource(resource)
+  ),
+  createButton(
+    "등록정보 삭제",
+    "danger",
+    () => deleteResource(resource)
+  )
+);
+
+header.append(information, actions);
+
+      if (resource.description) {
+        const description = document.createElement("div");
+
+        description.className = "resource-description";
+        description.textContent = resource.description;
+        article.append(header, description);
+      } else {
+        article.append(header);
+      }
+
+      if (resource.tags.length > 0) {
+        const tags = document.createElement("div");
+
+        for (const value of resource.tags) {
+          const tag = document.createElement("span");
+
+          tag.className = "tag";
+          tag.textContent = value;
+          tags.append(tag);
+        }
+
+        article.append(tags);
+      }
+
+      listElement.append(article);
+    }
+  }
+
+function editResource(resource) {
+  document.querySelector("#resource-id").value = resource.id;
+  document.querySelector("#file-path").value = resource.file_path;
+  document.querySelector("#display-name").value =
+    resource.display_name;
+  document.querySelector("#category").value = resource.category;
+  document.querySelector("#semester").value = resource.semester;
+  document.querySelector("#tags").value = resource.tags.join(", ");
+  document.querySelector("#description").value =
+    resource.description;
+
+  document.querySelector("#form-title").textContent = "자료 수정";
+  document.querySelector("#save-button").textContent = "수정 저장";
+  document.querySelector("#cancel-button").classList.remove("hidden");
+
+  form.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+}
+
+async function deleteResource(resource) {
+  const confirmed = window.confirm(
+    [
+      `"${resource.display_name}" 등록정보를 삭제할까요?`,
+      "NAS의 실제 파일은 삭제되지 않습니다."
+    ].join("\n")
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await request(
+      `/resources/${encodeURIComponent(resource.id)}`,
+      {
+        method: "DELETE"
+      }
+    );
+
+    if (
+      document.querySelector("#resource-id").value ===
+      String(resource.id)
+    ) {
+      resetResourceForm();
+    }
+
+    showMessage("자료 등록정보를 삭제했습니다.");
+    await loadResources();
+  } catch (error) {
+    showMessage(error.message, "error");
+  }
+}
+
+  async function loadResources() {
+    clearMessage();
+
+    const parameters = new URLSearchParams();
+
+    const query = document.querySelector("#search").value.trim();
+    const category =
+      document.querySelector("#filter-category").value.trim();
+    const semester =
+      document.querySelector("#filter-semester").value.trim();
+
+    if (query) parameters.set("q", query);
+    if (category) parameters.set("category", category);
+    if (semester) parameters.set("semester", semester);
+
+    try {
+      const suffix = parameters.toString()
+        ? `?${parameters}`
+        : "";
+
+      const data = await request(`/resources${suffix}`);
+
+      renderResources(data.resources);
+      showMessage(`${data.resources.length}개 자료를 찾았습니다.`);
+    } catch (error) {
+      renderResources([]);
+      showMessage(error.message, "error");
+    }
+  }
+function resetResourceForm() {
+  form.reset();
+  document.querySelector("#resource-id").value = "";
+  document.querySelector("#form-title").textContent = "자료 등록";
+  document.querySelector("#save-button").textContent = "저장";
+  document.querySelector("#cancel-button").classList.add("hidden");
+}
+
+function getResourceFormData() {
+  const tags = document
+    .querySelector("#tags")
+    .value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+
+  return {
+    filePath: document.querySelector("#file-path").value.trim(),
+    displayName:
+      document.querySelector("#display-name").value.trim(),
+    category: document.querySelector("#category").value.trim(),
+    semester: document.querySelector("#semester").value.trim(),
+    tags: [...new Set(tags)],
+    description:
+      document.querySelector("#description").value.trim()
+  };
+}
+
+async function saveResource(event) {
+  event.preventDefault();
+  clearMessage();
+
+  const resourceId =
+    document.querySelector("#resource-id").value;
+
+  const saveButton =
+    document.querySelector("#save-button");
+
+  saveButton.disabled = true;
+  saveButton.textContent = resourceId
+    ? "수정 중..."
+    : "저장 중...";
+
+  try {
+    await request(
+      resourceId
+        ? `/resources/${encodeURIComponent(resourceId)}`
+        : "/resources",
+      {
+        method: resourceId ? "PATCH" : "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(getResourceFormData())
+      }
+    );
+
+    const message = resourceId
+      ? "자료 정보를 수정했습니다."
+      : "자료를 등록했습니다.";
+
+    resetResourceForm();
+    showMessage(message);
+    await loadResources();
+  } catch (error) {
+    showMessage(error.message, "error");
+  } finally {
+    saveButton.disabled = false;
+
+    if (!document.querySelector("#resource-id").value) {
+      saveButton.textContent = "저장";
+    }
+  }
+}
+  document.querySelector(
+    "#search-button"
+  ).addEventListener("click", loadResources);
+
+  document.querySelector(
+    "#reset-button"
+  ).addEventListener("click", () => {
+    document.querySelector("#search").value = "";
+    document.querySelector("#filter-category").value = "";
+    document.querySelector("#filter-semester").value = "";
+    loadResources();
+  });
+
+  document.querySelector(
+    "#search"
+  ).addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      loadResources();
+    }
+  });
+form.addEventListener("submit", saveResource);
+
+document.querySelector(
+  "#cancel-button"
+).addEventListener("click", resetResourceForm);
+  loadResources();
+</script>
+</body>
+</html>

@@ -175,6 +175,186 @@ run_nas_api_tests() {
     echo "NAS API test passed."
 }
 
+run_resource_api_tests() {
+    BASE_URL="http://127.0.0.1:18000"
+    AUTHENTICATION="ci-user:ci-password"
+    RESOURCE_DIRECTORY="$TEST_NAS/Resource Test"
+    RESOURCE_FILE="$RESOURCE_DIRECTORY/lecture.pdf"
+
+    mkdir -p "$RESOURCE_DIRECTORY"
+    printf 'Resource archive test\n' > "$RESOURCE_FILE"
+
+    CREATE_RESPONSE="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "filePath":"Resource Test/lecture.pdf",
+              "displayName":"Linux server lecture",
+              "category":"Operating Systems",
+              "semester":"2026-2",
+              "tags":["linux","server"],
+              "description":"Resource archive API test"
+            }' \
+            "$BASE_URL/resources"
+    )"
+
+    printf '%s' "$CREATE_RESPONSE" |
+        grep -q '"file_path":"Resource Test/lecture.pdf"'
+
+    printf '%s' "$CREATE_RESPONSE" |
+        grep -q '"tags":\["linux","server"\]'
+
+    RESOURCE_ID="$(
+        node -e '
+          const resource = JSON.parse(process.argv[1]);
+          process.stdout.write(String(resource.id));
+        ' "$CREATE_RESPONSE"
+    )"
+
+    LIST_RESPONSE="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            "$BASE_URL/resources"
+    )"
+
+    printf '%s' "$LIST_RESPONSE" |
+        grep -q "\"id\":$RESOURCE_ID"
+
+    UPDATE_RESPONSE="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            -X PATCH \
+            -H "Content-Type: application/json" \
+            -d '{
+            "displayName":"Updated Linux lecture",
+            "category":"System Server Operations",
+            "tags":["linux","server","ubuntu"],
+            "description":"Updated resource metadata"
+            }' \
+            "$BASE_URL/resources/$RESOURCE_ID"
+    )"
+
+    printf '%s' "$UPDATE_RESPONSE" |
+        grep -q '"display_name":"Updated Linux lecture"'
+
+    printf '%s' "$UPDATE_RESPONSE" |
+        grep -q '"category":"System Server Operations"'
+
+    printf '%s' "$UPDATE_RESPONSE" |
+        grep -q '"tags":\["linux","server","ubuntu"\]'
+
+    FILTER_RESPONSE="$(
+    curl -fs \
+        -u "$AUTHENTICATION" \
+        -G \
+        --data-urlencode "q=ubuntu" \
+        --data-urlencode "category=System Server Operations" \
+        --data-urlencode "semester=2026-2" \
+        "$BASE_URL/resources"
+    )"
+
+    FILTERED_ID="$(
+        node -e '
+        const result = JSON.parse(process.argv[1]);
+
+        if (result.resources.length !== 1) {
+            process.exit(1);
+        }
+
+        process.stdout.write(String(result.resources[0].id));
+        ' "$FILTER_RESPONSE"
+    )"
+
+    if [ "$FILTERED_ID" != "$RESOURCE_ID" ]; then
+        echo "Resource filter returned the wrong resource."
+        exit 1
+    fi
+
+    EMPTY_FILTER_RESPONSE="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            -G \
+            --data-urlencode "q=does-not-exist" \
+            "$BASE_URL/resources"
+    )"
+
+    node -e '
+    const result = JSON.parse(process.argv[1]);
+
+    if (result.resources.length !== 0) {
+        process.exit(1);
+    }
+    ' "$EMPTY_FILTER_RESPONSE"
+
+    DUPLICATE_STATUS="$(
+        curl \
+            --silent \
+            --output /dev/null \
+            --write-out '%{http_code}' \
+            -u "$AUTHENTICATION" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "filePath":"Resource Test/lecture.pdf",
+              "displayName":"Duplicate resource"
+            }' \
+            "$BASE_URL/resources"
+    )"
+
+    if [ "$DUPLICATE_STATUS" != "409" ]; then
+        echo "Expected 409 for duplicate resource, got $DUPLICATE_STATUS."
+        exit 1
+    fi
+    DELETE_RESPONSE="$(
+    curl -fs \
+        -u "$AUTHENTICATION" \
+        -X DELETE \
+        "$BASE_URL/resources/$RESOURCE_ID"
+    )"
+
+    printf '%s' "$DELETE_RESPONSE" |
+        grep -q '"deleted":true'
+
+    printf '%s' "$DELETE_RESPONSE" |
+        grep -q '"file_deleted":false'
+
+    if [ ! -f "$RESOURCE_FILE" ]; then
+        echo "Resource deletion removed the NAS file."
+        exit 1
+    fi
+
+    AFTER_DELETE_RESPONSE="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            "$BASE_URL/resources"
+    )"
+
+    node -e '
+    const result = JSON.parse(process.argv[1]);
+    const deletedId = Number(process.argv[2]);
+
+    if (result.resources.some((resource) => resource.id === deletedId)) {
+        process.exit(1);
+    }
+    ' "$AFTER_DELETE_RESPONSE" "$RESOURCE_ID"
+
+    SECOND_DELETE_STATUS="$(
+        curl \
+            --silent \
+            --output /dev/null \
+            --write-out '%{http_code}' \
+            -u "$AUTHENTICATION" \
+            -X DELETE \
+            "$BASE_URL/resources/$RESOURCE_ID"
+    )"
+
+    if [ "$SECOND_DELETE_STATUS" != "404" ]; then
+        echo "Expected 404 after resource deletion, got $SECOND_DELETE_STATUS."
+        exit 1
+    fi
+    echo "Resource API test passed."
+}
+
 run_authentication_limit_test() {
     BASE_URL="http://127.0.0.1:18000"
     ATTEMPT_NUMBER=1
@@ -227,6 +407,7 @@ while [ "$ATTEMPT" -le 15 ]; do
         echo "$RESPONSE" | grep -q '"status":"ok"'
         echo "Smoke test passed: $RESPONSE"
         run_nas_api_tests
+        run_resource_api_tests
         run_authentication_limit_test
         exit 0
     fi
