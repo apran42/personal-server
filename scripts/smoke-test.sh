@@ -175,6 +175,74 @@ run_nas_api_tests() {
     echo "NAS API test passed."
 }
 
+run_resource_api_tests() {
+    BASE_URL="http://127.0.0.1:18000"
+    AUTHENTICATION="ci-user:ci-password"
+    RESOURCE_DIRECTORY="$TEST_NAS/Resource Test"
+    RESOURCE_FILE="$RESOURCE_DIRECTORY/lecture.pdf"
+
+    mkdir -p "$RESOURCE_DIRECTORY"
+    printf 'Resource archive test\n' > "$RESOURCE_FILE"
+
+    CREATE_RESPONSE="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "filePath":"Resource Test/lecture.pdf",
+              "displayName":"Linux server lecture",
+              "category":"Operating Systems",
+              "semester":"2026-2",
+              "tags":["linux","server"],
+              "description":"Resource archive API test"
+            }' \
+            "$BASE_URL/resources"
+    )"
+
+    printf '%s' "$CREATE_RESPONSE" |
+        grep -q '"file_path":"Resource Test/lecture.pdf"'
+
+    printf '%s' "$CREATE_RESPONSE" |
+        grep -q '"tags":\["linux","server"\]'
+
+    RESOURCE_ID="$(
+        node -e '
+          const resource = JSON.parse(process.argv[1]);
+          process.stdout.write(String(resource.id));
+        ' "$CREATE_RESPONSE"
+    )"
+
+    LIST_RESPONSE="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            "$BASE_URL/resources"
+    )"
+
+    printf '%s' "$LIST_RESPONSE" |
+        grep -q "\"id\":$RESOURCE_ID"
+
+    DUPLICATE_STATUS="$(
+        curl \
+            --silent \
+            --output /dev/null \
+            --write-out '%{http_code}' \
+            -u "$AUTHENTICATION" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "filePath":"Resource Test/lecture.pdf",
+              "displayName":"Duplicate resource"
+            }' \
+            "$BASE_URL/resources"
+    )"
+
+    if [ "$DUPLICATE_STATUS" != "409" ]; then
+        echo "Expected 409 for duplicate resource, got $DUPLICATE_STATUS."
+        exit 1
+    fi
+
+    echo "Resource API test passed."
+}
+
 run_authentication_limit_test() {
     BASE_URL="http://127.0.0.1:18000"
     ATTEMPT_NUMBER=1
@@ -227,6 +295,7 @@ while [ "$ATTEMPT" -le 15 ]; do
         echo "$RESPONSE" | grep -q '"status":"ok"'
         echo "Smoke test passed: $RESPONSE"
         run_nas_api_tests
+        run_resource_api_tests
         run_authentication_limit_test
         exit 0
     fi
