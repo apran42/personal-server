@@ -27,3 +27,4 @@ Tailscale에 연결된 기기에서만 접근할 수 있습니다.
 npm ci
 cp .env.example .env
 npm start
+```

@@ -9,12 +9,7 @@ const homeDirectory = process.env.HOME;
 const appDirectory = path.join(homeDirectory, "apps", "myserver");
 const nasRoot = process.env.NAS_ROOT
   ? path.resolve(process.env.NAS_ROOT)
-  : path.join(
-      homeDirectory,
-      "storage",
-      "shared",
-      "NAS"
-    );
+  : path.join(homeDirectory, "storage", "shared", "NAS");
 const backupDirectory = path.join(appDirectory, "backups");
 const backupLogPath = path.join(appDirectory, "logs", "backup.log");
 
@@ -25,11 +20,7 @@ function getLatestDatabaseBackup() {
 
   const backups = fs
     .readdirSync(backupDirectory, { withFileTypes: true })
-    .filter(
-      (entry) =>
-        entry.isFile() &&
-        /^server-.*\.db$/.test(entry.name)
-    )
+    .filter((entry) => entry.isFile() && /^server-.*\.db$/.test(entry.name))
     .map((entry) => {
       const filePath = path.join(backupDirectory, entry.name);
       const stats = fs.statSync(filePath);
@@ -41,10 +32,7 @@ function getLatestDatabaseBackup() {
         modifiedTime: stats.mtimeMs
       };
     })
-    .sort(
-      (first, second) =>
-        second.modifiedTime - first.modifiedTime
-    );
+    .sort((first, second) => second.modifiedTime - first.modifiedTime);
 
   if (backups.length === 0) {
     return null;
@@ -56,9 +44,7 @@ function getLatestDatabaseBackup() {
     name: latest.name,
     size: latest.size,
     modifiedAt: latest.modifiedAt,
-    ageHours:
-      (Date.now() - latest.modifiedTime) /
-      (1000 * 60 * 60)
+    ageHours: (Date.now() - latest.modifiedTime) / (1000 * 60 * 60)
   };
 }
 
@@ -75,13 +61,7 @@ function readLogTail(filePath, maximumBytes = 65536) {
   try {
     const buffer = Buffer.alloc(readSize);
 
-    fs.readSync(
-      descriptor,
-      buffer,
-      0,
-      readSize,
-      startPosition
-    );
+    fs.readSync(descriptor, buffer, 0, readSize, startPosition);
 
     return buffer.toString("utf8");
   } finally {
@@ -100,29 +80,20 @@ function getCloudBackupStatus() {
   const log = readLogTail(backupLogPath);
   const normalizedLog = log.toLowerCase();
 
-  const successIndex = normalizedLog.lastIndexOf(
-    "cloud backup completed."
-  );
+  const successIndex = normalizedLog.lastIndexOf("cloud backup completed.");
 
   const failureIndexes = [
     normalizedLog.lastIndexOf("error"),
     normalizedLog.lastIndexOf("failed"),
-    normalizedLog.lastIndexOf(
-      "no local database backup found."
-    ),
-    normalizedLog.lastIndexOf(
-      "uploaded database backup was not found."
-    )
+    normalizedLog.lastIndexOf("no local database backup found."),
+    normalizedLog.lastIndexOf("uploaded database backup was not found.")
   ];
 
   const latestFailureIndex = Math.max(...failureIndexes);
 
   let status = "unknown";
 
-  if (
-    successIndex >= 0 &&
-    successIndex > latestFailureIndex
-  ) {
+  if (successIndex >= 0 && successIndex > latestFailureIndex) {
     status = "success";
   } else if (latestFailureIndex >= 0) {
     status = "failed";
@@ -130,10 +101,7 @@ function getCloudBackupStatus() {
 
   return {
     status,
-    updatedAt: fs
-      .statSync(backupLogPath)
-      .mtime
-      .toISOString()
+    updatedAt: fs.statSync(backupLogPath).mtime.toISOString()
   };
 }
 
@@ -144,9 +112,7 @@ function getBackupStatus() {
   return {
     latestLocal,
     cloud,
-    stale:
-      latestLocal === null ||
-      latestLocal.ageHours > 26
+    stale: latestLocal === null || latestLocal.ageHours > 26
   };
 }
 

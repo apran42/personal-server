@@ -12,7 +12,7 @@ rotate_log() {
         return 0
     fi
 
-    FILE_SIZE="$(wc -c < "$LOG_FILE")"
+    FILE_SIZE="$(wc -c <"$LOG_FILE")"
 
     if [ "$FILE_SIZE" -lt "$MAX_BYTES" ]; then
         return 0
@@ -33,7 +33,7 @@ rotate_log() {
 
     mv "$TEMP_FILE" "${LOG_FILE}.1"
 
-    : > "$LOG_FILE"
+    : >"$LOG_FILE"
     chmod 600 "$LOG_FILE"
 
     echo "Rotated: $LOG_FILE"
@@ -51,8 +51,7 @@ for LOG_NAME in \
     trash-cleanup.log \
     log-rotation.log \
     storage-check.log \
-    nas-history-cleanup.log
-do
+    nas-history-cleanup.log; do
     rotate_log "$LOG_DIR/$LOG_NAME"
 done
 

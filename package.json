@@ -5,7 +5,11 @@
   "main": "index.js",
   "scripts": {
     "test": "./scripts/smoke-test.sh",
-    "start": "node --env-file=.env server.js"
+    "start": "node --env-file=.env server.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "format:shell": "shfmt -w -i 4 -ci scripts/*.sh",
+    "format:check:shell": "shfmt -d -i 4 -ci scripts/*.sh"
   },
   "keywords": [],
   "author": "",
@@ -14,5 +18,8 @@
   "dependencies": {
     "express": "^5.2.1",
     "multer": "^2.3.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6"
   }
 }

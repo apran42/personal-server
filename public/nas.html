@@ -1,1042 +1,888 @@
 <!doctype html>
 <html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <title>Note10 NAS</title>
+    <title>Note10 NAS</title>
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+    <style>
+      * {
+        box-sizing: border-box;
+      }
 
-    #search-input {
-      flex: 1;
-      min-width: 180px;
-      padding: 8px 10px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      font: inherit;
-    }
+      #search-input {
+        flex: 1;
+        min-width: 180px;
+        padding: 8px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font: inherit;
+      }
 
-    body {
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 24px;
-      color: #1f2937;
-      background: #f3f4f6;
-      font-family: system-ui, sans-serif;
-    }
-
-    header,
-    .panel {
-      padding: 18px;
-      margin-bottom: 16px;
-      border-radius: 12px;
-      background: white;
-      box-shadow: 0 2px 8px #00000012;
-    }
-
-    header {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    h1,
-    h2 {
-      margin-top: 0;
-    }
-
-    nav,
-    .toolbar,
-    .actions,
-    .breadcrumbs {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    a {
-      color: #2563eb;
-    }
-
-    button,
-    .button {
-      display: inline-block;
-      padding: 8px 12px;
-      border: 0;
-      border-radius: 8px;
-      color: white;
-      background: #2563eb;
-      font: inherit;
-      text-decoration: none;
-      cursor: pointer;
-    }
-
-    button.secondary,
-    .button.secondary {
-      color: #1f2937;
-      background: #e5e7eb;
-    }
-
-    button.danger {
-      background: #dc2626;
-    }
-
-    button.warning {
-      background: #d97706;
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: wait;
-    }
-
-    input[type="file"] {
-      max-width: 100%;
-    }
-
-    .toolbar {
-      margin-bottom: 16px;
-    }
-
-    .breadcrumbs {
-      padding: 12px;
-      margin-bottom: 16px;
-      border-radius: 8px;
-      background: #f9fafb;
-    }
-
-    .breadcrumb {
-      padding: 2px;
-      color: #2563eb;
-      background: transparent;
-    }
-
-    .breadcrumb-separator {
-      color: #9ca3af;
-    }
-
-    .entry-list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .entry {
-      display: grid;
-      grid-template-columns:
-        minmax(0, 1fr)
-        auto
-        auto;
-      gap: 16px;
-      align-items: center;
-      padding: 14px;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-    }
-
-    .entry-name {
-      min-width: 0;
-    }
-
-    .entry-title {
-      display: block;
-      overflow: hidden;
-      color: #1f2937;
-      font-weight: 700;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    button.entry-title {
-      width: 100%;
-      padding: 0;
-      text-align: left;
-      background: transparent;
-    }
-
-    a.entry-title {
-      text-decoration: none;
-    }
-
-    .entry-detail {
-      margin-top: 5px;
-      color: #6b7280;
-      font-size: 14px;
-    }
-
-    .empty {
-      padding: 32px;
-      color: #6b7280;
-      text-align: center;
-    }
-
-    #message {
-      min-height: 24px;
-      margin-bottom: 12px;
-    }
-
-    .success {
-      color: #047857;
-    }
-
-    .error {
-      color: #dc2626;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .trash-note {
-      margin-bottom: 16px;
-      color: #6b7280;
-      line-height: 1.6;
-    }
-
-    @media (max-width: 720px) {
       body {
-        padding: 12px;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 24px;
+        color: #1f2937;
+        background: #f3f4f6;
+        font-family: system-ui, sans-serif;
+      }
+
+      header,
+      .panel {
+        padding: 18px;
+        margin-bottom: 16px;
+        border-radius: 12px;
+        background: white;
+        box-shadow: 0 2px 8px #00000012;
       }
 
       header {
-        align-items: flex-start;
-        flex-direction: column;
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      h1,
+      h2 {
+        margin-top: 0;
+      }
+
+      nav,
+      .toolbar,
+      .actions,
+      .breadcrumbs {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      a {
+        color: #2563eb;
+      }
+
+      button,
+      .button {
+        display: inline-block;
+        padding: 8px 12px;
+        border: 0;
+        border-radius: 8px;
+        color: white;
+        background: #2563eb;
+        font: inherit;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      button.secondary,
+      .button.secondary {
+        color: #1f2937;
+        background: #e5e7eb;
+      }
+
+      button.danger {
+        background: #dc2626;
+      }
+
+      button.warning {
+        background: #d97706;
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: wait;
+      }
+
+      input[type="file"] {
+        max-width: 100%;
+      }
+
+      .toolbar {
+        margin-bottom: 16px;
+      }
+
+      .breadcrumbs {
+        padding: 12px;
+        margin-bottom: 16px;
+        border-radius: 8px;
+        background: #f9fafb;
+      }
+
+      .breadcrumb {
+        padding: 2px;
+        color: #2563eb;
+        background: transparent;
+      }
+
+      .breadcrumb-separator {
+        color: #9ca3af;
+      }
+
+      .entry-list {
+        display: grid;
+        gap: 10px;
       }
 
       .entry {
-        grid-template-columns: 1fr;
+        display: grid;
+        grid-template-columns:
+          minmax(0, 1fr)
+          auto
+          auto;
+        gap: 16px;
+        align-items: center;
+        padding: 14px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
       }
 
-      .actions {
-        justify-content: flex-start;
+      .entry-name {
+        min-width: 0;
       }
-    }
-  </style>
-</head>
 
-<body>
-  <header>
-    <div>
-      <h1>Note10 NAS</h1>
-      <div id="current-location">NAS 홈</div>
-    </div>
+      .entry-title {
+        display: block;
+        overflow: hidden;
+        color: #1f2937;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
 
-    <nav>
-      <a href="/">메모</a>
-      <a href="/system.html">서버 상태</a>
-      <a href="/resources.html">자료 아카이브</a>
+      button.entry-title {
+        width: 100%;
+        padding: 0;
+        text-align: left;
+        background: transparent;
+      }
 
-      <button
-        id="files-view-button"
-        class="secondary hidden"
-        type="button"
-      >
-        파일
-      </button>
+      a.entry-title {
+        text-decoration: none;
+      }
 
-      <button
-        id="trash-view-button"
-        class="secondary"
-        type="button"
-      >
-        휴지통
-      </button>
-    </nav>
-  </header>
+      .entry-detail {
+        margin-top: 5px;
+        color: #6b7280;
+        font-size: 14px;
+      }
 
-  <div id="message"></div>
+      .empty {
+        padding: 32px;
+        color: #6b7280;
+        text-align: center;
+      }
 
-  <main id="files-view">
-    <section class="panel">
-      <div class="toolbar">
-        <button id="new-folder-button" type="button">
-          새 폴더
+      #message {
+        min-height: 24px;
+        margin-bottom: 12px;
+      }
+
+      .success {
+        color: #047857;
+      }
+
+      .error {
+        color: #dc2626;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .trash-note {
+        margin-bottom: 16px;
+        color: #6b7280;
+        line-height: 1.6;
+      }
+
+      @media (max-width: 720px) {
+        body {
+          padding: 12px;
+        }
+
+        header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .entry {
+          grid-template-columns: 1fr;
+        }
+
+        .actions {
+          justify-content: flex-start;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <div>
+        <h1>Note10 NAS</h1>
+        <div id="current-location">NAS 홈</div>
+      </div>
+
+      <nav>
+        <a href="/">메모</a>
+        <a href="/system.html">서버 상태</a>
+        <a href="/resources.html">자료 아카이브</a>
+
+        <button id="files-view-button" class="secondary hidden" type="button">
+          파일
         </button>
 
-        <input
-          id="search-input"
-          type="search"
-          maxlength="100"
-          placeholder="파일 또는 폴더 이름 검색"
-        >
-
-        <button
-          id="search-button"
-          class="secondary"
-          type="button"
-        >
-          검색
+        <button id="trash-view-button" class="secondary" type="button">
+          휴지통
         </button>
+      </nav>
+    </header>
 
-        <input
-          id="file-input"
-          type="file"
-          multiple
-        >
+    <div id="message"></div>
 
-        <button id="upload-button" type="button">
-          업로드
-        </button>
+    <main id="files-view">
+      <section class="panel">
+        <div class="toolbar">
+          <button id="new-folder-button" type="button">새 폴더</button>
 
-        <button
-          id="refresh-button"
-          class="secondary"
-          type="button"
-        >
+          <input
+            id="search-input"
+            type="search"
+            maxlength="100"
+            placeholder="파일 또는 폴더 이름 검색"
+          />
+
+          <button id="search-button" class="secondary" type="button">
+            검색
+          </button>
+
+          <input id="file-input" type="file" multiple />
+
+          <button id="upload-button" type="button">업로드</button>
+
+          <button id="refresh-button" class="secondary" type="button">
+            새로고침
+          </button>
+        </div>
+
+        <div id="breadcrumbs" class="breadcrumbs"></div>
+
+        <div id="entry-list" class="entry-list">
+          <div class="empty">파일을 불러오는 중...</div>
+        </div>
+      </section>
+    </main>
+
+    <main id="trash-view" class="hidden">
+      <section class="panel">
+        <h2>휴지통</h2>
+
+        <div class="trash-note">
+          삭제한 파일과 폴더는 이곳으로 이동합니다. 영구 삭제 전까지 복원할 수
+          있습니다.
+        </div>
+
+        <button id="trash-refresh-button" class="secondary" type="button">
           새로고침
         </button>
-      </div>
 
-      <div id="breadcrumbs" class="breadcrumbs"></div>
+        <div id="trash-list" class="entry-list" style="margin-top: 16px">
+          <div class="empty">휴지통을 불러오는 중...</div>
+        </div>
+      </section>
+    </main>
 
-      <div id="entry-list" class="entry-list">
-        <div class="empty">파일을 불러오는 중...</div>
-      </div>
-    </section>
-  </main>
+    <script>
+      let currentPath = "";
 
-  <main id="trash-view" class="hidden">
-    <section class="panel">
-      <h2>휴지통</h2>
+      const messageElement = document.querySelector("#message");
 
-      <div class="trash-note">
-        삭제한 파일과 폴더는 이곳으로 이동합니다.
-        영구 삭제 전까지 복원할 수 있습니다.
-      </div>
+      const filesView = document.querySelector("#files-view");
 
-      <button
-        id="trash-refresh-button"
-        class="secondary"
-        type="button"
-      >
-        새로고침
-      </button>
+      const trashView = document.querySelector("#trash-view");
 
-      <div
-        id="trash-list"
-        class="entry-list"
-        style="margin-top: 16px"
-      >
-        <div class="empty">휴지통을 불러오는 중...</div>
-      </div>
-    </section>
-  </main>
+      const filesViewButton = document.querySelector("#files-view-button");
 
-  <script>
-    let currentPath = "";
+      const trashViewButton = document.querySelector("#trash-view-button");
 
-    const messageElement =
-      document.querySelector("#message");
-
-    const filesView =
-      document.querySelector("#files-view");
-
-    const trashView =
-      document.querySelector("#trash-view");
-
-    const filesViewButton =
-      document.querySelector("#files-view-button");
-
-    const trashViewButton =
-      document.querySelector("#trash-view-button");
-
-    function showMessage(message, type = "success") {
-      messageElement.textContent = message;
-      messageElement.className = type;
-    }
-
-    function clearMessage() {
-      messageElement.textContent = "";
-      messageElement.className = "";
-    }
-
-    function formatBytes(bytes) {
-      if (bytes === null || bytes === undefined) {
-        return "폴더";
+      function showMessage(message, type = "success") {
+        messageElement.textContent = message;
+        messageElement.className = type;
       }
 
-      const units = ["B", "KB", "MB", "GB", "TB"];
-      let value = bytes;
-      let index = 0;
-
-      while (
-        value >= 1024 &&
-        index < units.length - 1
-      ) {
-        value /= 1024;
-        index += 1;
+      function clearMessage() {
+        messageElement.textContent = "";
+        messageElement.className = "";
       }
 
-      return `${value.toFixed(
-        index === 0 ? 0 : 1
-      )} ${units[index]}`;
-    }
-
-    function formatDate(value) {
-      if (!value) {
-        return "-";
-      }
-
-      return new Date(value).toLocaleString("ko-KR");
-    }
-
-    async function request(url, options = {}) {
-      const response = await fetch(url, options);
-
-      if (response.status === 204) {
-        return null;
-      }
-
-      const contentType =
-        response.headers.get("content-type") || "";
-
-      const body = contentType.includes(
-        "application/json"
-      )
-        ? await response.json()
-        : await response.text();
-
-      if (!response.ok) {
-        const message =
-          typeof body === "object" && body.error
-            ? body.error
-            : "요청을 처리하지 못했습니다.";
-
-        throw new Error(message);
-      }
-
-      return body;
-    }
-
-    function createButton(
-      text,
-      className,
-      clickHandler
-    ) {
-      const button = document.createElement("button");
-
-      button.type = "button";
-      button.textContent = text;
-      button.className = className;
-      button.addEventListener("click", clickHandler);
-
-      return button;
-    }
-
-    function renderBreadcrumbs() {
-      const container =
-        document.querySelector("#breadcrumbs");
-
-      container.replaceChildren();
-
-      const rootButton = createButton(
-        "NAS",
-        "breadcrumb",
-        () => loadDirectory("")
-      );
-
-      container.append(rootButton);
-
-      const parts = currentPath
-        .split("/")
-        .filter(Boolean);
-
-      let accumulatedPath = "";
-
-      for (const part of parts) {
-        const separator =
-          document.createElement("span");
-
-        separator.textContent = "›";
-        separator.className =
-          "breadcrumb-separator";
-
-        container.append(separator);
-
-        accumulatedPath = accumulatedPath
-          ? `${accumulatedPath}/${part}`
-          : part;
-
-        const targetPath = accumulatedPath;
-
-        const button = createButton(
-          part,
-          "breadcrumb",
-          () => loadDirectory(targetPath)
-        );
-
-        container.append(button);
-      }
-    }
-function openResourceRegistration(entry) {
-  const parameters = new URLSearchParams({
-    filePath: entry.path,
-    displayName: entry.name
-  });
-
-  window.location.href =
-    `/resources.html?${parameters.toString()}`;
-}
-    function renderEntries(files) {
-      const container =
-        document.querySelector("#entry-list");
-
-      container.replaceChildren();
-
-      if (files.length === 0) {
-        const empty = document.createElement("div");
-
-        empty.className = "empty";
-        empty.textContent = "이 폴더는 비어 있습니다.";
-        container.append(empty);
-        return;
-      }
-
-      for (const entry of files) {
-        const row = document.createElement("article");
-        row.className = "entry";
-
-        const nameArea =
-          document.createElement("div");
-
-        nameArea.className = "entry-name";
-
-        let title;
-
-        if (entry.type === "directory") {
-          title = createButton(
-            `📁 ${entry.name}`,
-            "entry-title",
-            () => loadDirectory(entry.path)
-          );
-        } else {
-          title = document.createElement("a");
-          title.className = "entry-title";
-          title.textContent = `📄 ${entry.name}`;
-          title.href =
-            `/nas/download?path=${
-              encodeURIComponent(entry.path)
-            }`;
+      function formatBytes(bytes) {
+        if (bytes === null || bytes === undefined) {
+          return "폴더";
         }
 
-        const detail =
-          document.createElement("div");
+        const units = ["B", "KB", "MB", "GB", "TB"];
+        let value = bytes;
+        let index = 0;
 
-        detail.className = "entry-detail";
-        detail.textContent =
-          `${formatBytes(entry.size)} · ` +
-          `${formatDate(entry.modifiedAt)}`;
+        while (value >= 1024 && index < units.length - 1) {
+          value /= 1024;
+          index += 1;
+        }
 
-        nameArea.append(title, detail);
+        return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+      }
 
-        const typeElement =
-          document.createElement("div");
+      function formatDate(value) {
+        if (!value) {
+          return "-";
+        }
 
-        typeElement.textContent =
-          entry.type === "directory"
-            ? "폴더"
-            : "파일";
+        return new Date(value).toLocaleString("ko-KR");
+      }
 
-        const actions =
-          document.createElement("div");
+      async function request(url, options = {}) {
+        const response = await fetch(url, options);
 
-        actions.className = "actions";
-        if (entry.type === "file") {
-  actions.append(
-    createButton(
-      "자료 등록",
-      "",
-      () => openResourceRegistration(entry)
-    )
-  );
-}
-        actions.append(
-          createButton(
-            "이름 변경",
-            "secondary",
-            () => renameEntry(entry)
-          ),
+        if (response.status === 204) {
+          return null;
+        }
 
-          createButton(
-            "이동",
-            "secondary",
-            () => moveEntry(entry)
-          ),
+        const contentType = response.headers.get("content-type") || "";
 
-          createButton(
-            "휴지통",
-            "warning",
-            () => trashEntry(entry)
-          )
+        const body = contentType.includes("application/json")
+          ? await response.json()
+          : await response.text();
+
+        if (!response.ok) {
+          const message =
+            typeof body === "object" && body.error
+              ? body.error
+              : "요청을 처리하지 못했습니다.";
+
+          throw new Error(message);
+        }
+
+        return body;
+      }
+
+      function createButton(text, className, clickHandler) {
+        const button = document.createElement("button");
+
+        button.type = "button";
+        button.textContent = text;
+        button.className = className;
+        button.addEventListener("click", clickHandler);
+
+        return button;
+      }
+
+      function renderBreadcrumbs() {
+        const container = document.querySelector("#breadcrumbs");
+
+        container.replaceChildren();
+
+        const rootButton = createButton("NAS", "breadcrumb", () =>
+          loadDirectory("")
         );
 
-        row.append(nameArea, typeElement, actions);
-        container.append(row);
+        container.append(rootButton);
+
+        const parts = currentPath.split("/").filter(Boolean);
+
+        let accumulatedPath = "";
+
+        for (const part of parts) {
+          const separator = document.createElement("span");
+
+          separator.textContent = "›";
+          separator.className = "breadcrumb-separator";
+
+          container.append(separator);
+
+          accumulatedPath = accumulatedPath
+            ? `${accumulatedPath}/${part}`
+            : part;
+
+          const targetPath = accumulatedPath;
+
+          const button = createButton(part, "breadcrumb", () =>
+            loadDirectory(targetPath)
+          );
+
+          container.append(button);
+        }
       }
-    }
-
-        async function searchFiles() {
-      const searchInput =
-        document.querySelector("#search-input");
-
-      const query = searchInput.value.trim();
-
-      if (!query) {
-        await loadDirectory(currentPath);
-        return;
-      }
-
-      clearMessage();
-
-      try {
+      function openResourceRegistration(entry) {
         const parameters = new URLSearchParams({
-          q: query
+          filePath: entry.path,
+          displayName: entry.name
         });
 
-        const data = await request(
-          `/nas/search?${parameters}`
-        );
-
-        document.querySelector(
-          "#current-location"
-        ).textContent = `검색: ${data.query}`;
-
-        renderEntries(data.files);
-
-        if (data.truncated) {
-          showMessage(
-            "검색 결과가 많아 처음 100개만 표시합니다.",
-            "error"
-          );
-        } else {
-          showMessage(
-            `${data.files.length}개 항목을 찾았습니다.`
-          );
-        }
-      } catch (error) {
-        showMessage(error.message, "error");
+        window.location.href = `/resources.html?${parameters.toString()}`;
       }
-    }
+      function renderEntries(files) {
+        const container = document.querySelector("#entry-list");
 
-    async function loadDirectory(path = currentPath) {
-      clearMessage();
-      document.querySelector("#search-input").value = "";
-      try {
-        const query = new URLSearchParams({
-          path
-        });
+        container.replaceChildren();
 
-        const data = await request(
-          `/nas/files?${query}`
+        if (files.length === 0) {
+          const empty = document.createElement("div");
+
+          empty.className = "empty";
+          empty.textContent = "이 폴더는 비어 있습니다.";
+          container.append(empty);
+          return;
+        }
+
+        for (const entry of files) {
+          const row = document.createElement("article");
+          row.className = "entry";
+
+          const nameArea = document.createElement("div");
+
+          nameArea.className = "entry-name";
+
+          let title;
+
+          if (entry.type === "directory") {
+            title = createButton(`📁 ${entry.name}`, "entry-title", () =>
+              loadDirectory(entry.path)
+            );
+          } else {
+            title = document.createElement("a");
+            title.className = "entry-title";
+            title.textContent = `📄 ${entry.name}`;
+            title.href = `/nas/download?path=${encodeURIComponent(entry.path)}`;
+          }
+
+          const detail = document.createElement("div");
+
+          detail.className = "entry-detail";
+          detail.textContent =
+            `${formatBytes(entry.size)} · ` + `${formatDate(entry.modifiedAt)}`;
+
+          nameArea.append(title, detail);
+
+          const typeElement = document.createElement("div");
+
+          typeElement.textContent =
+            entry.type === "directory" ? "폴더" : "파일";
+
+          const actions = document.createElement("div");
+
+          actions.className = "actions";
+          if (entry.type === "file") {
+            actions.append(
+              createButton("자료 등록", "", () =>
+                openResourceRegistration(entry)
+              )
+            );
+          }
+          actions.append(
+            createButton("이름 변경", "secondary", () => renameEntry(entry)),
+
+            createButton("이동", "secondary", () => moveEntry(entry)),
+
+            createButton("휴지통", "warning", () => trashEntry(entry))
+          );
+
+          row.append(nameArea, typeElement, actions);
+          container.append(row);
+        }
+      }
+
+      async function searchFiles() {
+        const searchInput = document.querySelector("#search-input");
+
+        const query = searchInput.value.trim();
+
+        if (!query) {
+          await loadDirectory(currentPath);
+          return;
+        }
+
+        clearMessage();
+
+        try {
+          const parameters = new URLSearchParams({
+            q: query
+          });
+
+          const data = await request(`/nas/search?${parameters}`);
+
+          document.querySelector("#current-location").textContent =
+            `검색: ${data.query}`;
+
+          renderEntries(data.files);
+
+          if (data.truncated) {
+            showMessage("검색 결과가 많아 처음 100개만 표시합니다.", "error");
+          } else {
+            showMessage(`${data.files.length}개 항목을 찾았습니다.`);
+          }
+        } catch (error) {
+          showMessage(error.message, "error");
+        }
+      }
+
+      async function loadDirectory(path = currentPath) {
+        clearMessage();
+        document.querySelector("#search-input").value = "";
+        try {
+          const query = new URLSearchParams({
+            path
+          });
+
+          const data = await request(`/nas/files?${query}`);
+
+          currentPath = data.path;
+
+          document.querySelector("#current-location").textContent =
+            currentPath || "NAS 홈";
+
+          renderBreadcrumbs();
+          renderEntries(data.files);
+        } catch (error) {
+          showMessage(error.message, "error");
+        }
+      }
+
+      async function createFolder() {
+        const name = window.prompt("새 폴더 이름을 입력하세요.");
+
+        if (name === null || !name.trim()) {
+          return;
+        }
+
+        try {
+          await request("/nas/folder", {
+            method: "POST",
+
+            headers: {
+              "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+              path: currentPath,
+              name: name.trim()
+            })
+          });
+
+          showMessage("폴더를 만들었습니다.");
+          await loadDirectory(currentPath);
+        } catch (error) {
+          showMessage(error.message, "error");
+        }
+      }
+
+      async function uploadFiles() {
+        const input = document.querySelector("#file-input");
+
+        const files = Array.from(input.files);
+
+        if (files.length === 0) {
+          showMessage("업로드할 파일을 선택하세요.", "error");
+          return;
+        }
+
+        if (files.length > 5) {
+          showMessage("한 번에 최대 5개까지 업로드할 수 있습니다.", "error");
+          return;
+        }
+
+        const formData = new FormData();
+
+        for (const file of files) {
+          formData.append("files", file);
+        }
+
+        const button = document.querySelector("#upload-button");
+
+        button.disabled = true;
+        button.textContent = "업로드 중...";
+
+        try {
+          const query = new URLSearchParams({
+            dir: currentPath || "Uploads"
+          });
+
+          await request(`/nas/upload?${query}`, {
+            method: "POST",
+            body: formData
+          });
+
+          input.value = "";
+
+          showMessage(`${files.length}개 파일을 업로드했습니다.`);
+
+          await loadDirectory(currentPath || "Uploads");
+        } catch (error) {
+          showMessage(error.message, "error");
+        } finally {
+          button.disabled = false;
+          button.textContent = "업로드";
+        }
+      }
+
+      async function renameEntry(entry) {
+        const name = window.prompt("새 이름을 입력하세요.", entry.name);
+
+        if (name === null || !name.trim() || name.trim() === entry.name) {
+          return;
+        }
+
+        try {
+          await request("/nas/entry", {
+            method: "PATCH",
+
+            headers: {
+              "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+              path: entry.path,
+              name: name.trim()
+            })
+          });
+
+          showMessage("이름을 변경했습니다.");
+          await loadDirectory(currentPath);
+        } catch (error) {
+          showMessage(error.message, "error");
+        }
+      }
+
+      async function moveEntry(entry) {
+        const destination = window.prompt(
+          [
+            "이동할 폴더 경로를 입력하세요.",
+            "예: Documents/자격증",
+            "NAS 최상위는 빈칸으로 둡니다."
+          ].join("\n")
         );
 
-        currentPath = data.path;
+        if (destination === null) {
+          return;
+        }
 
-        document.querySelector(
-          "#current-location"
-        ).textContent =
+        try {
+          await request("/nas/move", {
+            method: "POST",
+
+            headers: {
+              "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+              path: entry.path,
+              destination: destination.trim()
+            })
+          });
+
+          showMessage("항목을 이동했습니다.");
+          await loadDirectory(currentPath);
+        } catch (error) {
+          showMessage(error.message, "error");
+        }
+      }
+
+      async function trashEntry(entry) {
+        const confirmed = window.confirm(
+          `"${entry.name}"을(를) 휴지통으로 이동할까요?`
+        );
+
+        if (!confirmed) {
+          return;
+        }
+
+        try {
+          const query = new URLSearchParams({
+            path: entry.path
+          });
+
+          await request(`/nas/entry?${query}`, {
+            method: "DELETE"
+          });
+
+          showMessage("휴지통으로 이동했습니다.");
+          await loadDirectory(currentPath);
+        } catch (error) {
+          showMessage(error.message, "error");
+        }
+      }
+
+      function renderTrash(items) {
+        const container = document.querySelector("#trash-list");
+
+        container.replaceChildren();
+
+        if (items.length === 0) {
+          const empty = document.createElement("div");
+
+          empty.className = "empty";
+          empty.textContent = "휴지통이 비어 있습니다.";
+          container.append(empty);
+          return;
+        }
+
+        for (const item of items) {
+          const row = document.createElement("article");
+          row.className = "entry";
+
+          const nameArea = document.createElement("div");
+
+          nameArea.className = "entry-name";
+
+          const title = document.createElement("div");
+
+          title.className = "entry-title";
+          title.textContent =
+            `${item.type === "directory" ? "📁" : "📄"} ` + item.name;
+
+          const detail = document.createElement("div");
+
+          detail.className = "entry-detail";
+          detail.textContent =
+            `원래 위치: ${item.originalPath} · ` +
+            `삭제: ${formatDate(item.deletedAt)}`;
+
+          nameArea.append(title, detail);
+
+          const typeElement = document.createElement("div");
+
+          typeElement.textContent = formatBytes(item.size);
+
+          const actions = document.createElement("div");
+
+          actions.className = "actions";
+
+          actions.append(
+            createButton("복원", "", () => restoreTrashItem(item)),
+
+            createButton("영구 삭제", "danger", () => permanentlyDelete(item))
+          );
+
+          row.append(nameArea, typeElement, actions);
+          container.append(row);
+        }
+      }
+
+      async function loadTrash() {
+        clearMessage();
+
+        try {
+          const data = await request("/nas/trash");
+          renderTrash(data.items);
+        } catch (error) {
+          showMessage(error.message, "error");
+        }
+      }
+
+      async function restoreTrashItem(item) {
+        try {
+          await request("/nas/trash/restore", {
+            method: "POST",
+
+            headers: {
+              "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+              id: item.id
+            })
+          });
+
+          showMessage(`"${item.name}"을(를) 복원했습니다.`);
+
+          await loadTrash();
+        } catch (error) {
+          showMessage(error.message, "error");
+        }
+      }
+
+      async function permanentlyDelete(item) {
+        const confirmed = window.confirm(
+          [
+            `"${item.name}"을(를) 영구 삭제할까요?`,
+            "이 작업은 되돌릴 수 없습니다."
+          ].join("\n")
+        );
+
+        if (!confirmed) {
+          return;
+        }
+
+        try {
+          await request(`/nas/trash/${encodeURIComponent(item.id)}`, {
+            method: "DELETE"
+          });
+
+          showMessage("항목을 영구 삭제했습니다.");
+          await loadTrash();
+        } catch (error) {
+          showMessage(error.message, "error");
+        }
+      }
+
+      function showFilesView() {
+        filesView.classList.remove("hidden");
+        trashView.classList.add("hidden");
+        filesViewButton.classList.add("hidden");
+        trashViewButton.classList.remove("hidden");
+
+        document.querySelector("#current-location").textContent =
           currentPath || "NAS 홈";
 
-        renderBreadcrumbs();
-        renderEntries(data.files);
-      } catch (error) {
-        showMessage(error.message, "error");
-      }
-    }
-
-    async function createFolder() {
-      const name = window.prompt(
-        "새 폴더 이름을 입력하세요."
-      );
-
-      if (name === null || !name.trim()) {
-        return;
+        loadDirectory(currentPath);
       }
 
-      try {
-        await request("/nas/folder", {
-          method: "POST",
+      function showTrashView() {
+        filesView.classList.add("hidden");
+        trashView.classList.remove("hidden");
+        filesViewButton.classList.remove("hidden");
+        trashViewButton.classList.add("hidden");
 
-          headers: {
-            "Content-Type": "application/json"
-          },
+        document.querySelector("#current-location").textContent = "휴지통";
 
-          body: JSON.stringify({
-            path: currentPath,
-            name: name.trim()
-          })
+        loadTrash();
+      }
+
+      document
+        .querySelector("#new-folder-button")
+        .addEventListener("click", createFolder);
+
+      document
+        .querySelector("#upload-button")
+        .addEventListener("click", uploadFiles);
+
+      document
+        .querySelector("#refresh-button")
+        .addEventListener("click", () => loadDirectory(currentPath));
+
+      document
+        .querySelector("#trash-refresh-button")
+        .addEventListener("click", loadTrash);
+
+      document
+        .querySelector("#search-button")
+        .addEventListener("click", searchFiles);
+
+      document
+        .querySelector("#search-input")
+        .addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            searchFiles();
+          }
         });
 
-        showMessage("폴더를 만들었습니다.");
-        await loadDirectory(currentPath);
-      } catch (error) {
-        showMessage(error.message, "error");
-      }
-    }
+      filesViewButton.addEventListener("click", showFilesView);
 
-    async function uploadFiles() {
-      const input =
-        document.querySelector("#file-input");
+      trashViewButton.addEventListener("click", showTrashView);
 
-      const files = Array.from(input.files);
-
-      if (files.length === 0) {
-        showMessage(
-          "업로드할 파일을 선택하세요.",
-          "error"
-        );
-        return;
-      }
-
-      if (files.length > 5) {
-        showMessage(
-          "한 번에 최대 5개까지 업로드할 수 있습니다.",
-          "error"
-        );
-        return;
-      }
-
-      const formData = new FormData();
-
-      for (const file of files) {
-        formData.append("files", file);
-      }
-
-      const button =
-        document.querySelector("#upload-button");
-
-      button.disabled = true;
-      button.textContent = "업로드 중...";
-
-      try {
-        const query = new URLSearchParams({
-          dir: currentPath || "Uploads"
-        });
-
-        await request(`/nas/upload?${query}`, {
-          method: "POST",
-          body: formData
-        });
-
-        input.value = "";
-
-        showMessage(
-          `${files.length}개 파일을 업로드했습니다.`
-        );
-
-        await loadDirectory(
-          currentPath || "Uploads"
-        );
-      } catch (error) {
-        showMessage(error.message, "error");
-      } finally {
-        button.disabled = false;
-        button.textContent = "업로드";
-      }
-    }
-
-    async function renameEntry(entry) {
-      const name = window.prompt(
-        "새 이름을 입력하세요.",
-        entry.name
-      );
-
-      if (
-        name === null ||
-        !name.trim() ||
-        name.trim() === entry.name
-      ) {
-        return;
-      }
-
-      try {
-        await request("/nas/entry", {
-          method: "PATCH",
-
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-            path: entry.path,
-            name: name.trim()
-          })
-        });
-
-        showMessage("이름을 변경했습니다.");
-        await loadDirectory(currentPath);
-      } catch (error) {
-        showMessage(error.message, "error");
-      }
-    }
-
-    async function moveEntry(entry) {
-      const destination = window.prompt(
-        [
-          "이동할 폴더 경로를 입력하세요.",
-          "예: Documents/자격증",
-          "NAS 최상위는 빈칸으로 둡니다."
-        ].join("\n")
-      );
-
-      if (destination === null) {
-        return;
-      }
-
-      try {
-        await request("/nas/move", {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-            path: entry.path,
-            destination: destination.trim()
-          })
-        });
-
-        showMessage("항목을 이동했습니다.");
-        await loadDirectory(currentPath);
-      } catch (error) {
-        showMessage(error.message, "error");
-      }
-    }
-
-    async function trashEntry(entry) {
-      const confirmed = window.confirm(
-        `"${entry.name}"을(를) 휴지통으로 이동할까요?`
-      );
-
-      if (!confirmed) {
-        return;
-      }
-
-      try {
-        const query = new URLSearchParams({
-          path: entry.path
-        });
-
-        await request(`/nas/entry?${query}`, {
-          method: "DELETE"
-        });
-
-        showMessage("휴지통으로 이동했습니다.");
-        await loadDirectory(currentPath);
-      } catch (error) {
-        showMessage(error.message, "error");
-      }
-    }
-
-    function renderTrash(items) {
-      const container =
-        document.querySelector("#trash-list");
-
-      container.replaceChildren();
-
-      if (items.length === 0) {
-        const empty = document.createElement("div");
-
-        empty.className = "empty";
-        empty.textContent = "휴지통이 비어 있습니다.";
-        container.append(empty);
-        return;
-      }
-
-      for (const item of items) {
-        const row = document.createElement("article");
-        row.className = "entry";
-
-        const nameArea =
-          document.createElement("div");
-
-        nameArea.className = "entry-name";
-
-        const title =
-          document.createElement("div");
-
-        title.className = "entry-title";
-        title.textContent =
-          `${item.type === "directory" ? "📁" : "📄"} ` +
-          item.name;
-
-        const detail =
-          document.createElement("div");
-
-        detail.className = "entry-detail";
-        detail.textContent =
-          `원래 위치: ${item.originalPath} · ` +
-          `삭제: ${formatDate(item.deletedAt)}`;
-
-        nameArea.append(title, detail);
-
-        const typeElement =
-          document.createElement("div");
-
-        typeElement.textContent =
-          formatBytes(item.size);
-
-        const actions =
-          document.createElement("div");
-
-        actions.className = "actions";
-
-        actions.append(
-          createButton(
-            "복원",
-            "",
-            () => restoreTrashItem(item)
-          ),
-
-          createButton(
-            "영구 삭제",
-            "danger",
-            () => permanentlyDelete(item)
-          )
-        );
-
-        row.append(nameArea, typeElement, actions);
-        container.append(row);
-      }
-    }
-
-    async function loadTrash() {
-      clearMessage();
-
-      try {
-        const data = await request("/nas/trash");
-        renderTrash(data.items);
-      } catch (error) {
-        showMessage(error.message, "error");
-      }
-    }
-
-    async function restoreTrashItem(item) {
-      try {
-        await request("/nas/trash/restore", {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-            id: item.id
-          })
-        });
-
-        showMessage(
-          `"${item.name}"을(를) 복원했습니다.`
-        );
-
-        await loadTrash();
-      } catch (error) {
-        showMessage(error.message, "error");
-      }
-    }
-
-    async function permanentlyDelete(item) {
-      const confirmed = window.confirm(
-        [
-          `"${item.name}"을(를) 영구 삭제할까요?`,
-          "이 작업은 되돌릴 수 없습니다."
-        ].join("\n")
-      );
-
-      if (!confirmed) {
-        return;
-      }
-
-      try {
-        await request(
-          `/nas/trash/${encodeURIComponent(item.id)}`,
-          { method: "DELETE" }
-        );
-
-        showMessage("항목을 영구 삭제했습니다.");
-        await loadTrash();
-      } catch (error) {
-        showMessage(error.message, "error");
-      }
-    }
-
-    function showFilesView() {
-      filesView.classList.remove("hidden");
-      trashView.classList.add("hidden");
-      filesViewButton.classList.add("hidden");
-      trashViewButton.classList.remove("hidden");
-
-      document.querySelector(
-        "#current-location"
-      ).textContent = currentPath || "NAS 홈";
-
-      loadDirectory(currentPath);
-    }
-
-    function showTrashView() {
-      filesView.classList.add("hidden");
-      trashView.classList.remove("hidden");
-      filesViewButton.classList.remove("hidden");
-      trashViewButton.classList.add("hidden");
-
-      document.querySelector(
-        "#current-location"
-      ).textContent = "휴지통";
-
-      loadTrash();
-    }
-
-    document.querySelector(
-      "#new-folder-button"
-    ).addEventListener("click", createFolder);
-
-    document.querySelector(
-      "#upload-button"
-    ).addEventListener("click", uploadFiles);
-
-    document.querySelector(
-      "#refresh-button"
-    ).addEventListener(
-      "click",
-      () => loadDirectory(currentPath)
-    );
-
-    document.querySelector(
-      "#trash-refresh-button"
-    ).addEventListener("click", loadTrash);
-
-    document.querySelector(
-      "#search-button"
-    ).addEventListener("click", searchFiles);
-
-    document.querySelector(
-      "#search-input"
-    ).addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        searchFiles();
-      }
-    });
-
-    filesViewButton.addEventListener(
-      "click",
-      showFilesView
-    );
-
-    trashViewButton.addEventListener(
-      "click",
-      showTrashView
-    );
-
-    loadDirectory("");
-  </script>
-</body>
+      loadDirectory("");
+    </script>
+  </body>
 </html>

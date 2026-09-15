@@ -46,7 +46,7 @@ get_usage_percent() {
 USAGE_PERCENT="$(get_usage_percent)"
 
 case "$USAGE_PERCENT" in
-    ""|*[!0-9]*)
+    "" | *[!0-9]*)
         echo "Could not determine storage usage."
         send_ping "$STORAGE_PING_URL/fail" || true
         exit 1

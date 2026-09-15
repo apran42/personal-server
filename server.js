@@ -12,11 +12,7 @@ const host = process.env.HOST || "0.0.0.0";
 const port = Number(process.env.PORT || 8000);
 const databasePath = process.env.DATABASE_PATH
   ? path.resolve(process.env.DATABASE_PATH)
-  : path.join(
-      __dirname,
-      "data",
-      "server.db"
-    );
+  : path.join(__dirname, "data", "server.db");
 
 const db = new DatabaseSync(databasePath);
 const resourcesRouter = createResourcesRouter(db);
@@ -64,19 +60,20 @@ app.get("/health", (req, res) => {
 
 app.get("/notes", (req, res) => {
   const notes = db
-    .prepare(`
+    .prepare(
+      `
       SELECT id, title, content, created_at
       FROM notes
       ORDER BY id DESC
-    `)
+    `
+    )
     .all();
 
   res.json(notes);
 });
 
 app.post("/notes", (req, res) => {
-  const title =
-    typeof req.body.title === "string" ? req.body.title.trim() : "";
+  const title = typeof req.body.title === "string" ? req.body.title.trim() : "";
 
   const content =
     typeof req.body.content === "string" ? req.body.content.trim() : "";
@@ -94,18 +91,22 @@ app.post("/notes", (req, res) => {
   }
 
   const result = db
-    .prepare(`
+    .prepare(
+      `
       INSERT INTO notes (title, content)
       VALUES (?, ?)
-    `)
+    `
+    )
     .run(title, content);
 
   const note = db
-    .prepare(`
+    .prepare(
+      `
       SELECT id, title, content, created_at
       FROM notes
       WHERE id = ?
-    `)
+    `
+    )
     .get(result.lastInsertRowid);
 
   res.status(201).json(note);
@@ -120,9 +121,7 @@ app.delete("/notes/:id", (req, res) => {
     });
   }
 
-  const result = db
-    .prepare("DELETE FROM notes WHERE id = ?")
-    .run(id);
+  const result = db.prepare("DELETE FROM notes WHERE id = ?").run(id);
 
   if (result.changes === 0) {
     return res.status(404).json({

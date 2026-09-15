@@ -7,7 +7,7 @@ MODE="${1:---dry-run}"
 RETENTION_MINUTES=43200
 
 case "$MODE" in
-    --dry-run|--apply)
+    --dry-run | --apply)
         ;;
     *)
         echo "Usage: $0 [--dry-run|--apply]"
@@ -31,24 +31,24 @@ find "$TRASH_DIR" \
     -type d \
     -mmin "+$RETENTION_MINUTES" \
     -print |
-while IFS= read -r ITEM; do
-    case "$ITEM" in
-        "$TRASH_DIR"/*)
-            ;;
-        *)
-            echo "Unsafe path rejected: $ITEM"
-            exit 1
-            ;;
-    esac
+    while IFS= read -r ITEM; do
+        case "$ITEM" in
+            "$TRASH_DIR"/*)
+                ;;
+            *)
+                echo "Unsafe path rejected: $ITEM"
+                exit 1
+                ;;
+        esac
 
-    FOUND=1
+        FOUND=1
 
-    if [ "$MODE" = "--apply" ]; then
-        rm -rf -- "$ITEM"
-        echo "Deleted: $ITEM"
-    else
-        echo "Would delete: $ITEM"
-    fi
-done
+        if [ "$MODE" = "--apply" ]; then
+            rm -rf -- "$ITEM"
+            echo "Deleted: $ITEM"
+        else
+            echo "Would delete: $ITEM"
+        fi
+    done
 
 echo "Trash cleanup completed."
