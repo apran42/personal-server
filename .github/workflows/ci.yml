@@ -26,15 +26,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install shell formatter
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y shfmt
-
       - name: Check formatting
         run: |
           npm run format:check
-          npm run format:check:shell
+          docker run --rm \
+            -v "$PWD:/mnt" \
+            -w /mnt \
+            mvdan/shfmt:v3.13.1 \
+            -d -i 4 -ci scripts/*.sh
 
       - name: Audit dependencies
         run: npm audit --audit-level=high
