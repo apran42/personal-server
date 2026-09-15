@@ -45,7 +45,11 @@ app.get("/", (req, res) => {
       "GET /health",
       "GET /notes",
       "POST /notes",
-      "DELETE /notes/:id"
+      "DELETE /notes/:id",
+      "GET /resources",
+      "POST /resources",
+      "PATCH /resources/:id",
+      "DELETE /resources/:id"
     ]
   });
 });

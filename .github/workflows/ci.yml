@@ -47,3 +47,4 @@ jobs:
           test -f .env.example
           test -f scripts/smoke-test.sh
           test -f resources.js
+          test -f public/resources.html
