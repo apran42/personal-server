@@ -5,7 +5,15 @@ const crypto = require("crypto");
 const multer = require("multer");
 
 const router = express.Router();
+let resourcePathUpdater = () => 0;
 
+router.setResourcePathUpdater = (updater) => {
+  if (typeof updater !== "function") {
+    throw new TypeError("Resource path updater must be a function");
+  }
+
+  resourcePathUpdater = updater;
+};
 const nasRoot = process.env.NAS_ROOT
   ? path.resolve(process.env.NAS_ROOT)
   : path.join(process.env.HOME, "storage", "shared", "NAS");
@@ -23,6 +31,10 @@ function createHttpError(status, message) {
 
 function toPosixPath(value) {
   return value.replaceAll("\\", "/");
+}
+
+function getRelativeNasPath(absolutePath) {
+  return toPosixPath(path.relative(nasRoot, absolutePath));
 }
 
 function isTrashPath(relativePath) {
@@ -393,7 +405,7 @@ router.patch("/entry", async (req, res, next) => {
       throw createHttpError(400, "NAS root cannot be renamed");
     }
 
-    await getSafeEntry(sourcePath);
+    const sourceStat = await getSafeEntry(sourcePath);
 
     const newName = cleanFilename(requestedName);
 
@@ -410,17 +422,30 @@ router.patch("/entry", async (req, res, next) => {
       );
     }
 
+    const sourceRelative = getRelativeNasPath(sourcePath);
+    const destinationRelative = getRelativeNasPath(destinationPath);
+
     await fs.promises.rename(sourcePath, destinationPath);
 
-    const parentRelative = path.dirname(toPosixPath(relativePath));
+    try {
+      resourcePathUpdater({
+        sourcePath: sourceRelative,
+        destinationPath: destinationRelative,
+        isDirectory: sourceStat.isDirectory()
+      });
+    } catch (error) {
+      try {
+        await fs.promises.rename(destinationPath, sourcePath);
+      } catch (rollbackError) {
+        console.error("Failed to roll back NAS rename:", rollbackError);
+      }
+
+      throw error;
+    }
 
     return res.json({
       name: newName,
-
-      path: path.posix.join(
-        parentRelative === "." ? "" : parentRelative,
-        newName
-      )
+      path: destinationRelative
     });
   } catch (error) {
     return handleFileError(error, res, next);
@@ -472,13 +497,29 @@ router.post("/move", async (req, res, next) => {
       throw createHttpError(409, "The destination already contains that name");
     }
 
+    const normalizedSource = getRelativeNasPath(sourcePath);
+    const normalizedDestination = getRelativeNasPath(destinationPath);
+
     await fs.promises.rename(sourcePath, destinationPath);
 
+    try {
+      resourcePathUpdater({
+        sourcePath: normalizedSource,
+        destinationPath: normalizedDestination,
+        isDirectory: sourceStat.isDirectory()
+      });
+    } catch (error) {
+      try {
+        await fs.promises.rename(destinationPath, sourcePath);
+      } catch (rollbackError) {
+        console.error("Failed to roll back NAS move:", rollbackError);
+      }
+
+      throw error;
+    }
+
     return res.json({
-      path: path.posix.join(
-        toPosixPath(destinationRelative),
-        path.basename(sourcePath)
-      )
+      path: normalizedDestination
     });
   } catch (error) {
     return handleFileError(error, res, next);

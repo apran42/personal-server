@@ -45,6 +45,7 @@ jobs:
           node --check nas.js
           node --check system.js
           node --check resources.js
+          node --check resource-paths.js
       - name: Run server smoke test
         run: npm test
       - name: Check required files
@@ -57,3 +58,4 @@ jobs:
           test -f scripts/smoke-test.sh
           test -f resources.js
           test -f public/resources.html
+          test -f resource-paths.js

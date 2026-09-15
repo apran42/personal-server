@@ -209,7 +209,102 @@ run_resource_api_tests() {
           process.stdout.write(String(resource.id));
         ' "$CREATE_RESPONSE"
     )"
+    curl -fs \
+        -u "$AUTHENTICATION" \
+        -X PATCH \
+        -H "Content-Type: application/json" \
+        -d '{
+      "path":"Resource Test/lecture.pdf",
+      "name":"lecture-renamed.pdf"
+    }' \
+        "$BASE_URL/nas/entry" \
+        >/dev/null
 
+    RENAME_SYNC_RESPONSE="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            "$BASE_URL/resources"
+    )"
+
+    printf '%s' "$RENAME_SYNC_RESPONSE" |
+        grep -q '"file_path":"Resource Test/lecture-renamed.pdf"'
+
+    curl -fs \
+        -u "$AUTHENTICATION" \
+        -H "Content-Type: application/json" \
+        -d '{"path":"","name":"Resource Destination"}' \
+        "$BASE_URL/nas/folder" \
+        >/dev/null
+
+    curl -fs \
+        -u "$AUTHENTICATION" \
+        -H "Content-Type: application/json" \
+        -d '{
+      "path":"Resource Test/lecture-renamed.pdf",
+      "destination":"Resource Destination"
+    }' \
+        "$BASE_URL/nas/move" \
+        >/dev/null
+
+    MOVE_SYNC_RESPONSE="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            "$BASE_URL/resources"
+    )"
+
+    printf '%s' "$MOVE_SYNC_RESPONSE" |
+        grep -q \
+            '"file_path":"Resource Destination/lecture-renamed.pdf"'
+
+    curl -fs \
+        -u "$AUTHENTICATION" \
+        -X PATCH \
+        -H "Content-Type: application/json" \
+        -d '{
+      "path":"Resource Destination",
+      "name":"Resource Archive"
+    }' \
+        "$BASE_URL/nas/entry" \
+        >/dev/null
+
+    DIRECTORY_RENAME_RESPONSE="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            "$BASE_URL/resources"
+    )"
+
+    printf '%s' "$DIRECTORY_RENAME_RESPONSE" |
+        grep -q \
+            '"file_path":"Resource Archive/lecture-renamed.pdf"'
+
+    curl -fs \
+        -u "$AUTHENTICATION" \
+        -H "Content-Type: application/json" \
+        -d '{"path":"","name":"Final Destination"}' \
+        "$BASE_URL/nas/folder" \
+        >/dev/null
+
+    curl -fs \
+        -u "$AUTHENTICATION" \
+        -H "Content-Type: application/json" \
+        -d '{
+      "path":"Resource Archive",
+      "destination":"Final Destination"
+    }' \
+        "$BASE_URL/nas/move" \
+        >/dev/null
+
+    DIRECTORY_MOVE_RESPONSE="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            "$BASE_URL/resources"
+    )"
+
+    printf '%s' "$DIRECTORY_MOVE_RESPONSE" |
+        grep -q \
+            '"file_path":"Final Destination/Resource Archive/lecture-renamed.pdf"'
+
+    RESOURCE_FILE="$TEST_NAS/Final Destination/Resource Archive/lecture-renamed.pdf"
     LIST_RESPONSE="$(
         curl -fs \
             -u "$AUTHENTICATION" \
@@ -293,7 +388,7 @@ run_resource_api_tests() {
             -u "$AUTHENTICATION" \
             -H "Content-Type: application/json" \
             -d '{
-              "filePath":"Resource Test/lecture.pdf",
+              "filePath":"Final Destination/Resource Archive/lecture-renamed.pdf",
               "displayName":"Duplicate resource"
             }' \
             "$BASE_URL/resources"
