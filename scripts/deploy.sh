@@ -29,7 +29,13 @@ npm ci --omit=dev
 
 echo "5/6 Copying application files"
 
-for FILE in server.js auth.js nas.js system.js resources.js; do
+for FILE in \
+    server.js \
+    auth.js \
+    nas.js \
+    system.js \
+    resources.js \
+    resource-paths.js; do
     cp "$REPO_DIR/$FILE" "$APP_DIR/$FILE"
 done
 

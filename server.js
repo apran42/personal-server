@@ -2,6 +2,7 @@ const systemRouter = require("./system");
 const nasRouter = require("./nas");
 const basicAuth = require("./auth");
 const createResourcesRouter = require("./resources");
+const createResourcePathUpdater = require("./resource-paths");
 const express = require("express");
 const path = require("path");
 const { DatabaseSync } = require("node:sqlite");
@@ -16,6 +17,8 @@ const databasePath = process.env.DATABASE_PATH
 
 const db = new DatabaseSync(databasePath);
 const resourcesRouter = createResourcesRouter(db);
+
+nasRouter.setResourcePathUpdater(createResourcePathUpdater(db));
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS notes (
