@@ -190,6 +190,16 @@
         <div id="battery-detail" class="detail">-</div>
       </section>
       <section class="card">
+        <h2>Wi-Fi 연결</h2>
+        <div id="wifi-value" class="value">확인 중</div>
+
+        <div class="progress">
+          <div id="wifi-bar" class="progress-bar"></div>
+        </div>
+
+        <div id="wifi-detail" class="detail">-</div>
+      </section>
+      <section class="card">
         <h2>서버 프로세스</h2>
         <div id="process-memory" class="value">-</div>
         <div class="detail">Node.js 프로세스 메모리 사용량</div>
@@ -317,6 +327,85 @@
 
         return hasWarning;
       }
+
+      function renderWifi(wifi) {
+        const valueElement = document.querySelector("#wifi-value");
+        const barElement = document.querySelector("#wifi-bar");
+        const detailElement = document.querySelector("#wifi-detail");
+
+        if (!wifi?.available) {
+          valueElement.textContent = "사용 불가";
+          valueElement.className = "value status-warning";
+          barElement.style.width = "0%";
+          barElement.classList.remove("warning");
+          detailElement.textContent =
+            wifi?.reason || "Wi-Fi 상태를 확인할 수 없습니다.";
+
+          return true;
+        }
+
+        if (!wifi.connected) {
+          valueElement.textContent = "연결되지 않음";
+          valueElement.className = "value error";
+          barElement.style.width = "0%";
+          barElement.classList.add("warning");
+          detailElement.textContent = `상태 ${wifi.supplicantState}`;
+
+          return true;
+        }
+
+        const rssi = typeof wifi.rssi === "number" ? wifi.rssi : -100;
+        const signalPercent = Math.min(Math.max((rssi + 100) * 2, 0), 100);
+
+        let signalText = "매우 약함";
+
+        if (rssi >= -50) {
+          signalText = "매우 좋음";
+        } else if (rssi >= -60) {
+          signalText = "좋음";
+        } else if (rssi >= -70) {
+          signalText = "보통";
+        } else if (rssi >= -80) {
+          signalText = "약함";
+        }
+
+        let bandText = "주파수 미확인";
+
+        if (wifi.frequencyMhz >= 5925) {
+          bandText = "6GHz";
+        } else if (wifi.frequencyMhz >= 4900) {
+          bandText = "5GHz";
+        } else if (wifi.frequencyMhz >= 2400) {
+          bandText = "2.4GHz";
+        }
+
+        const hasWarning = rssi < -70;
+
+        valueElement.textContent = `${signalText} · ${rssi} dBm`;
+        valueElement.className = hasWarning
+          ? "value status-warning"
+          : "value status-good";
+
+        barElement.style.width = `${signalPercent}%`;
+        barElement.classList.toggle("warning", hasWarning);
+
+        const details = [
+          wifi.ssid || "SSID 미확인",
+          bandText,
+          typeof wifi.linkSpeedMbps === "number"
+            ? `${wifi.linkSpeedMbps} Mbps`
+            : "속도 미확인"
+        ];
+
+        if (wifi.ip) {
+          details.push(wifi.ip);
+        }
+
+        detailElement.textContent = details.join(" · ");
+
+        return hasWarning;
+      }
+
       function renderBackup(backup) {
         const statusElement = document.querySelector("#backup-status");
 
@@ -429,11 +518,13 @@
           renderBackup(data.backup);
 
           const batteryWarning = renderBattery(data.phone?.battery);
+          const wifiWarning = renderWifi(data.phone?.wifi);
 
           const hasWarning =
             data.backup.stale ||
             data.backup.cloud.status !== "success" ||
-            batteryWarning;
+            batteryWarning ||
+            wifiWarning;
 
           statusMessage.className = hasWarning
             ? "status-warning"

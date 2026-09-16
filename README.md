@@ -18,6 +18,7 @@
 - PDF·텍스트·DOCX·PPTX·XLSX·HWPX 본문 색인 및 검색
 - Termux:API 기반 스마트폰 배터리 상태 대시보드
 - 원본 파일이 사라진 자료의 검색 색인 자동 정리
+- 배터리·Wi-Fi 상태 감시 및 Healthchecks/Discord 장애 알림
 
 ## 서비스 주소
 

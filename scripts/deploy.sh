@@ -50,6 +50,7 @@ for SCRIPT in \
     cleanup-nas-history.sh \
     run-backup-monitored.sh \
     check-server-health.sh \
+    check-device-status.sh \
     rotate-logs.sh \
     check-storage.sh; do
     cp \
@@ -64,6 +65,7 @@ chmod +x \
     "$APP_DIR/scripts/cleanup-nas-history.sh" \
     "$APP_DIR/scripts/run-backup-monitored.sh" \
     "$APP_DIR/scripts/check-server-health.sh" \
+    "$APP_DIR/scripts/check-device-status.sh" \
     "$APP_DIR/scripts/rotate-logs.sh" \
     "$APP_DIR/scripts/check-storage.sh"
 

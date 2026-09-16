@@ -584,6 +584,7 @@ run_system_status_test() {
     )"
 
     node -e '
+    
     const result = JSON.parse(process.argv[1]);
     const battery = result.phone?.battery;
 
@@ -617,6 +618,50 @@ run_system_status_test() {
         console.error("Unavailable battery status has no reason.");
         process.exit(1);
     }
+    const wifi = result.phone?.wifi;
+
+if (!wifi || typeof wifi.available !== "boolean") {
+  console.error("Wi-Fi availability status is missing.");
+  process.exit(1);
+}
+
+if (wifi.available) {
+  if (typeof wifi.connected !== "boolean") {
+    console.error("Wi-Fi connection status is invalid.");
+    process.exit(1);
+  }
+
+  if (
+    typeof wifi.supplicantState !== "string" ||
+    (wifi.rssi !== null && typeof wifi.rssi !== "number") ||
+    (wifi.frequencyMhz !== null &&
+      typeof wifi.frequencyMhz !== "number") ||
+    (wifi.linkSpeedMbps !== null &&
+      typeof wifi.linkSpeedMbps !== "number")
+  ) {
+    console.error("Wi-Fi status fields are invalid.");
+    process.exit(1);
+  }
+
+  if (
+    wifi.ssid !== null &&
+    typeof wifi.ssid !== "string"
+  ) {
+    console.error("Wi-Fi SSID is invalid.");
+    process.exit(1);
+  }
+
+  if (wifi.ip !== null && typeof wifi.ip !== "string") {
+    console.error("Wi-Fi IP address is invalid.");
+    process.exit(1);
+  }
+} else if (
+  typeof wifi.reason !== "string" ||
+  wifi.reason.length === 0
+) {
+  console.error("Unavailable Wi-Fi status has no reason.");
+  process.exit(1);
+}
     ' "$STATUS_RESPONSE"
 
     echo "System status API test passed."

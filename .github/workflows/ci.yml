@@ -55,8 +55,9 @@ jobs:
           test -f public/nas.html
           test -f public/system.html
           test -f scripts/backup-db.sh
-          test -f .env.example
+          test -f scripts/check-device-status.sh
           test -f scripts/smoke-test.sh
+          test -f .env.example
           test -f resources.js
           test -f public/resources.html
           test -f resource-paths.js

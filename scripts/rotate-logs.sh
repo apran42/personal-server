@@ -48,6 +48,7 @@ for LOG_NAME in \
     backup.log \
     watchdog.log \
     healthcheck.log \
+    device-status.log \
     trash-cleanup.log \
     log-rotation.log \
     storage-check.log \
