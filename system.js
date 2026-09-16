@@ -2,6 +2,10 @@ const express = require("express");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const { execFile } = require("child_process");
+const { promisify } = require("util");
+
+const execFileAsync = promisify(execFile);
 
 const router = express.Router();
 
@@ -115,14 +119,57 @@ function getBackupStatus() {
     stale: latestLocal === null || latestLocal.ageHours > 26
   };
 }
+function normalizeNumber(value) {
+  const number = Number(value);
 
-router.get("/status", (req, res, next) => {
+  return Number.isFinite(number) ? number : null;
+}
+
+async function getBatteryStatus() {
+  try {
+    const result = await execFileAsync("termux-battery-status", [], {
+      timeout: 5000,
+      maxBuffer: 64 * 1024
+    });
+
+    const battery = JSON.parse(result.stdout);
+
+    return {
+      available: true,
+      percentage: normalizeNumber(battery.percentage),
+      status: battery.status || "UNKNOWN",
+      health: battery.health || "UNKNOWN",
+      plugged: battery.plugged || "UNKNOWN",
+      temperatureC: normalizeNumber(battery.temperature),
+      currentMicroamps: normalizeNumber(battery.current),
+      currentAverageMicroamps: normalizeNumber(battery.current_average)
+    };
+  } catch (error) {
+    let reason = "Termux:API request failed";
+
+    if (error.code === "ENOENT") {
+      reason = "termux-api command is not installed";
+    } else if (error.killed || error.signal === "SIGTERM") {
+      reason = "Termux:API request timed out";
+    } else if (error instanceof SyntaxError) {
+      reason = "Termux:API returned invalid JSON";
+    }
+
+    return {
+      available: false,
+      reason
+    };
+  }
+}
+
+router.get("/status", async (req, res, next) => {
   try {
     const memory = process.memoryUsage();
     const disk = fs.statfsSync(nasRoot);
 
     const diskTotal = disk.blocks * disk.bsize;
     const diskFree = disk.bavail * disk.bsize;
+    const battery = await getBatteryStatus();
 
     res.json({
       system: {
@@ -150,6 +197,10 @@ router.get("/status", (req, res, next) => {
         total: diskTotal,
         free: diskFree,
         used: diskTotal - diskFree
+      },
+
+      phone: {
+        battery
       },
 
       backup: getBackupStatus(),

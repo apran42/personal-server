@@ -29,6 +29,13 @@ const TEXT_EXTENSIONS = new Set([
   ".csv"
 ]);
 
+const ARCHIVE_DOCUMENT_EXTENSIONS = new Set([
+  ".docx",
+  ".pptx",
+  ".xlsx",
+  ".hwpx"
+]);
+
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const MAX_INDEX_CHARACTERS = 2_000_000;
 
@@ -44,6 +51,92 @@ function normalizeContent(value) {
     .replace(/\r\n?/g, "\n")
     .trim()
     .slice(0, MAX_INDEX_CHARACTERS);
+}
+
+function decodeXmlEntities(value) {
+  return value
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) =>
+      String.fromCodePoint(Number.parseInt(code, 16))
+    )
+    .replace(/&#([0-9]+);/g, (_, code) =>
+      String.fromCodePoint(Number.parseInt(code, 10))
+    )
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&apos;", "'")
+    .replaceAll("&amp;", "&");
+}
+
+function xmlToText(value) {
+  return decodeXmlEntities(
+    value
+      .replace(/<(?:w:tab|a:tab)\b[^>]*\/?>/gi, "\t")
+      .replace(/<\/(?:w:p|a:p|x:row|hp:p|hs:sec|text:p)>/gi, "\n")
+      .replace(/<[^>]+>/g, " ")
+  )
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n");
+}
+
+function selectArchiveEntries(extension, entries) {
+  const patternsByExtension = {
+    ".docx": [
+      /^word\/document\.xml$/i,
+      /^word\/(?:header|footer)\d+\.xml$/i,
+      /^word\/(?:footnotes|endnotes)\.xml$/i
+    ],
+    ".pptx": [
+      /^ppt\/slides\/slide\d+\.xml$/i,
+      /^ppt\/notesSlides\/notesSlide\d+\.xml$/i
+    ],
+    ".xlsx": [/^xl\/sharedStrings\.xml$/i, /^xl\/worksheets\/sheet\d+\.xml$/i],
+    ".hwpx": [/^Contents\/section\d+\.xml$/i, /^Preview\/PrvText\.txt$/i]
+  };
+
+  const patterns = patternsByExtension[extension] || [];
+
+  return entries
+    .filter((entry) => patterns.some((pattern) => pattern.test(entry)))
+    .sort((left, right) =>
+      left.localeCompare(right, "en", {
+        numeric: true
+      })
+    );
+}
+
+async function extractArchiveDocument(absolutePath, extension) {
+  const listResult = await execFileAsync("unzip", ["-Z1", absolutePath], {
+    timeout: 30_000,
+    maxBuffer: 2 * 1024 * 1024
+  });
+
+  const entries = listResult.stdout
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  const selectedEntries = selectArchiveEntries(extension, entries);
+
+  if (selectedEntries.length === 0) {
+    throw createIndexError(
+      "NO_TEXT",
+      "The document does not contain supported text entries"
+    );
+  }
+
+  const result = await execFileAsync(
+    "unzip",
+    ["-p", absolutePath, ...selectedEntries],
+    {
+      timeout: 60_000,
+      maxBuffer: 8 * 1024 * 1024
+    }
+  );
+
+  return xmlToText(result.stdout);
 }
 
 function createResourceIndex(options = {}) {
@@ -227,6 +320,8 @@ function createResourceIndex(options = {}) {
       );
 
       content = result.stdout;
+    } else if (ARCHIVE_DOCUMENT_EXTENSIONS.has(extension)) {
+      content = await extractArchiveDocument(absolutePath, extension);
     } else if (TEXT_EXTENSIONS.has(extension)) {
       content = await fs.promises.readFile(absolutePath, "utf8");
     } else {

@@ -203,6 +203,16 @@
         background: #f3f4f6;
         border-radius: 8px;
       }
+      .resource-warning {
+        display: inline-block;
+        margin-top: 8px;
+        padding: 4px 8px;
+        color: #991b1b;
+        background: #fee2e2;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 700;
+      }
     </style>
   </head>
 
@@ -400,13 +410,29 @@
             `수정 ${formatDate(resource.updated_at)}`
           ].join(" · ");
 
-          information.append(title, fileLink, metadata);
+          information.append(title, fileLink);
+
+          if (resource.file_missing) {
+            const warning = document.createElement("span");
+
+            warning.className = "resource-warning";
+            warning.textContent = "원본 파일 없음";
+
+            information.append(warning);
+          }
+
+          information.append(metadata);
           const actions = document.createElement("div");
           actions.className = "actions";
 
           const indexButton = createButton("본문 색인", "secondary", () =>
             indexResource(resource, indexButton)
           );
+
+          if (resource.file_missing) {
+            indexButton.disabled = true;
+            indexButton.textContent = "색인 불가";
+          }
 
           actions.append(
             indexButton,
