@@ -175,6 +175,21 @@ Termux:API 앱은 현재 사용하는 Termux와 같은 배포처에서 설치해
 Termux:API가 설치되지 않았거나 응답하지 않더라도 웹 서버와 기존 시스템 상태 기능은 계속 동작하며, 대시보드에는 `사용 불가`로 표시된다.
 
 서버 상태 화면은 30초마다 자동으로 갱신된다.
+기기 상태 검사는 5분마다 실행하며 다음 조건을 장애로 처리한다.
+
+- 배터리 온도 45℃ 이상
+- 배터리 건강 상태가 `GOOD` 또는 `UNKNOWN`이 아님
+- 배터리가 15% 이하이면서 충전 중이 아님
+- Wi-Fi 연결 상태가 `COMPLETED`가 아님
+- Wi-Fi 신호가 -80dBm 미만
+- Termux:API 명령 실패 또는 시간 초과
+
+장애가 감지되면 Healthchecks의 실패 URL을 호출하고 Discord로 DOWN 알림을 보낸다. 상태가 정상으로 돌아오면 성공 URL을 호출하여 UP 알림을 보낸다.
+
+설정 파일에는 기기 상태 체크의 Ping URL을 저장한다.
+
+````dotenv
+DEVICE_PING_URL=https://hc-ping.com/고유-ID
 
 ## 자동 작업
 
@@ -184,6 +199,7 @@ Termux의 `crond`가 다음 작업을 실행한다.
 | ---------- | -------------------------------- | ----------------------------- |
 | 5분마다    | 서버 및 code-server 자동 복구    | `~/.termux/boot/start-server` |
 | 5분마다    | 서버 상태 확인 및 외부 생존 신호 | `check-server-health.sh`      |
+| 5분마다    | 배터리 및 Wi-Fi 상태 감시        | `check-device-status.sh`      |
 | 매시 15분  | 저장공간 사용률 확인             | `check-storage.sh`            |
 | 매일 03:30 | DB 및 NAS 암호화 백업            | `run-backup-monitored.sh`     |
 | 매일 04:00 | 30일 지난 휴지통 정리            | `cleanup-trash.sh`            |
@@ -194,7 +210,7 @@ Termux의 `crond`가 다음 작업을 실행한다.
 
 ```bash
 crontab -l
-```
+````
 
 cron 프로세스가 실행 중인지 확인한다.
 
@@ -204,16 +220,17 @@ pgrep -af crond
 
 ## 로그 확인
 
-| 로그                | 내용                       |
-| ------------------- | -------------------------- |
-| `server.log`        | Node.js 서버 실행 기록     |
-| `code-server.log`   | code-server 실행 기록      |
-| `backup.log`        | 로컬 및 클라우드 백업 결과 |
-| `watchdog.log`      | 서비스 자동 복구 기록      |
-| `healthcheck.log`   | 서버 생존 확인 결과        |
-| `storage-check.log` | 저장공간 확인 결과         |
-| `trash-cleanup.log` | 휴지통 자동 정리 결과      |
-| `log-rotation.log`  | 로그 회전 결과             |
+| 로그                | 내용                           |
+| ------------------- | ------------------------------ |
+| `server.log`        | Node.js 서버 실행 기록         |
+| `code-server.log`   | code-server 실행 기록          |
+| `backup.log`        | 로컬 및 클라우드 백업 결과     |
+| `watchdog.log`      | 서비스 자동 복구 기록          |
+| `healthcheck.log`   | 서버 생존 확인 결과            |
+| `storage-check.log` | 저장공간 확인 결과             |
+| `trash-cleanup.log` | 휴지통 자동 정리 결과          |
+| `log-rotation.log`  | 로그 회전 결과                 |
+| `device-status.log` | 배터리 및 Wi-Fi 상태 확인 결과 |
 
 최근 로그는 다음 명령으로 확인한다.
 

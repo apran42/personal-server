@@ -161,7 +161,49 @@ async function getBatteryStatus() {
     };
   }
 }
+async function getWifiStatus() {
+  try {
+    const result = await execFileAsync("termux-wifi-connectioninfo", [], {
+      timeout: 5000,
+      maxBuffer: 64 * 1024
+    });
 
+    const wifi = JSON.parse(result.stdout);
+    const frequencyMhz = normalizeNumber(wifi.frequency_mhz);
+    const rssi = normalizeNumber(wifi.rssi);
+    const linkSpeedMbps = normalizeNumber(wifi.link_speed_mbps);
+    const supplicantState = wifi.supplicant_state || "UNKNOWN";
+
+    return {
+      available: true,
+      connected:
+        supplicantState === "COMPLETED" &&
+        frequencyMhz !== null &&
+        frequencyMhz > 0,
+      supplicantState,
+      frequencyMhz,
+      linkSpeedMbps,
+      rssi,
+      ssid: wifi.ssid || null,
+      ip: wifi.ip || null
+    };
+  } catch (error) {
+    let reason = "Termux:API Wi-Fi request failed";
+
+    if (error.code === "ENOENT") {
+      reason = "termux-api command is not installed";
+    } else if (error.killed || error.signal === "SIGTERM") {
+      reason = "Termux:API Wi-Fi request timed out";
+    } else if (error instanceof SyntaxError) {
+      reason = "Termux:API returned invalid Wi-Fi JSON";
+    }
+
+    return {
+      available: false,
+      reason
+    };
+  }
+}
 router.get("/status", async (req, res, next) => {
   try {
     const memory = process.memoryUsage();
@@ -169,7 +211,10 @@ router.get("/status", async (req, res, next) => {
 
     const diskTotal = disk.blocks * disk.bsize;
     const diskFree = disk.bavail * disk.bsize;
-    const battery = await getBatteryStatus();
+    const [battery, wifi] = await Promise.all([
+      getBatteryStatus(),
+      getWifiStatus()
+    ]);
 
     res.json({
       system: {
@@ -200,7 +245,8 @@ router.get("/status", async (req, res, next) => {
       },
 
       phone: {
-        battery
+        battery,
+        wifi
       },
 
       backup: getBackupStatus(),
