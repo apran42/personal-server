@@ -116,7 +116,7 @@ function validateNasFile(nasRoot, filePath) {
   return null;
 }
 
-function createResourcesRouter(db) {
+function createResourcesRouter(db, resourceIndex = null) {
   if (!db) {
     throw new Error("Database connection is required");
   }
@@ -147,6 +147,83 @@ function createResourcesRouter(db) {
   `);
 
   const router = express.Router();
+
+  router.get("/content-search", (req, res, next) => {
+    try {
+      if (!resourceIndex) {
+        return res.status(503).json({
+          error: "resource search index is unavailable"
+        });
+      }
+
+      const query = cleanText(req.query.q, 100);
+
+      if (!query) {
+        return res.status(400).json({
+          error: "search query is required"
+        });
+      }
+
+      const matches = resourceIndex.search(query, req.query.limit);
+
+      if (matches.length === 0) {
+        return res.json({
+          query,
+          resources: []
+        });
+      }
+
+      const resourceIds = matches.map((match) => match.resourceId);
+      const placeholders = resourceIds.map(() => "?").join(", ");
+
+      const records = db
+        .prepare(
+          `
+          SELECT
+            id,
+            file_path,
+            display_name,
+            category,
+            semester,
+            tags,
+            description,
+            created_at,
+            updated_at
+          FROM resources
+          WHERE id IN (${placeholders})
+        `
+        )
+        .all(...resourceIds);
+
+      const recordsById = new Map(
+        records.map((resource) => [Number(resource.id), resource])
+      );
+
+      const resources = matches
+        .map((match) => {
+          const resource = recordsById.get(match.resourceId);
+
+          if (!resource) {
+            return null;
+          }
+
+          return {
+            ...resource,
+            tags: parseTags(resource.tags),
+            snippet: match.snippet,
+            rank: match.rank
+          };
+        })
+        .filter(Boolean);
+
+      return res.json({
+        query,
+        resources
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
 
   router.get("/", (req, res, next) => {
     try {
@@ -313,6 +390,70 @@ function createResourcesRouter(db) {
         tags: parseTags(resource.tags)
       });
     } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/index", async (req, res, next) => {
+    try {
+      if (!resourceIndex) {
+        return res.status(503).json({
+          error: "resource search index is unavailable"
+        });
+      }
+
+      const id = Number(req.params.id);
+
+      if (!Number.isInteger(id) || id < 1) {
+        return res.status(400).json({
+          error: "invalid resource id"
+        });
+      }
+
+      const resource = db
+        .prepare(
+          `
+          SELECT
+            id,
+            file_path,
+            display_name
+          FROM resources
+          WHERE id = ?
+        `
+        )
+        .get(id);
+
+      if (!resource) {
+        return res.status(404).json({
+          error: "resource not found"
+        });
+      }
+
+      const result = await resourceIndex.indexResource(resource);
+
+      return res.json({
+        message: "resource indexed",
+        index: result
+      });
+    } catch (error) {
+      const statusByCode = {
+        INVALID_PATH: 400,
+        INVALID_RESOURCE: 400,
+        FILE_NOT_FOUND: 404,
+        FILE_TOO_LARGE: 413,
+        UNSUPPORTED_TYPE: 415,
+        NO_TEXT: 422
+      };
+
+      const status = statusByCode[error.code];
+
+      if (status) {
+        return res.status(status).json({
+          error: error.message,
+          code: error.code
+        });
+      }
+
       next(error);
     }
   });
@@ -509,8 +650,23 @@ function createResourcesRouter(db) {
 
       db.prepare("DELETE FROM resources WHERE id = ?").run(id);
 
+      let indexDeleted = false;
+
+      if (resourceIndex) {
+        try {
+          resourceIndex.removeResource(id);
+          indexDeleted = true;
+        } catch (indexError) {
+          console.error(
+            `Failed to remove search index for resource ${id}:`,
+            indexError
+          );
+        }
+      }
+
       return res.json({
         deleted: true,
+        index_deleted: indexDeleted,
         resource: {
           id: resource.id,
           file_path: resource.file_path,

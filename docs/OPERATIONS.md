@@ -126,6 +126,39 @@ Deployment completed successfully.
 5. 운영 경로에 코드 복사
 6. 서버 재시작 및 상태 검사
 
+## 자료 본문 검색
+
+자료실에 등록한 NAS 파일의 내용을 SQLite FTS5 검색 인덱스에 저장하여 검색할 수 있다.
+
+PDF 본문 추출에는 Termux의 `poppler` 패키지가 필요하다.
+
+```bash
+pkg install poppler
+pdftotext -v
+```
+
+자료실 화면에서 각 자료의 `본문 색인` 버튼을 누르면 파일 내용이 색인된다. 색인이 완료된 후 검색 방식을 `파일 본문 검색`으로 변경하여 검색한다.
+
+지원하는 주요 형식:
+
+- PDF: `.pdf`
+- 문서: `.txt`, `.md`, `.markdown`, `.csv`
+- 웹: `.html`, `.css`, `.js`, `.json`
+- 설정: `.yml`, `.yaml`
+- 소스코드: `.sh`, `.py`, `.java`, `.c`, `.cpp` 등
+
+한 파일의 색인 크기는 최대 25MB이며, 추출된 본문은 최대 2,000,000자까지 저장한다.
+
+검색 인덱스 기본 경로:
+
+```text
+~/apps/myserver/data/search-index.db
+```
+
+검색 인덱스는 NAS 파일에서 다시 생성할 수 있는 파생 데이터이므로 Google Drive 백업 대상에 포함하지 않는다. 검색 인덱스가 삭제되거나 손상되면 자료실에서 `본문 색인`을 다시 실행한다.
+
+자료의 실제 파일 내용이 변경된 경우에도 본문 색인을 다시 실행해야 한다. 자료 등록정보를 삭제하면 해당 자료의 검색 색인도 함께 삭제된다.
+
 ## 자동 작업
 
 Termux의 `crond`가 다음 작업을 실행한다.
@@ -137,6 +170,7 @@ Termux의 `crond`가 다음 작업을 실행한다.
 | 매시 15분  | 저장공간 사용률 확인             | `check-storage.sh`            |
 | 매일 03:30 | DB 및 NAS 암호화 백업            | `run-backup-monitored.sh`     |
 | 매일 04:00 | 30일 지난 휴지통 정리            | `cleanup-trash.sh`            |
+| 매일 04:05 | 90일 지난 NAS 이전 버전 정리     | `cleanup-nas-history.sh`      |
 | 매일 04:10 | 5MB 이상 로그 회전               | `rotate-logs.sh`              |
 
 현재 일정을 확인한다.
