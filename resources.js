@@ -57,7 +57,39 @@ function cleanFilePath(value) {
 
   return normalized;
 }
+function nasFileExists(nasRoot, filePath) {
+  const absolutePath = path.resolve(nasRoot, filePath);
+  const rootPrefix = `${nasRoot}${path.sep}`;
 
+  if (!absolutePath.startsWith(rootPrefix)) {
+    return false;
+  }
+
+  try {
+    return fs.statSync(absolutePath).isFile();
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
+function removeMissingResourceIndex(resourceIndex, resourceId) {
+  if (!resourceIndex) {
+    return;
+  }
+
+  try {
+    resourceIndex.removeResource(resourceId);
+  } catch (error) {
+    console.error(
+      `Failed to remove missing resource index ${resourceId}:`,
+      error
+    );
+  }
+}
 function cleanTags(value) {
   if (value === undefined) {
     return [];
@@ -204,6 +236,12 @@ function createResourcesRouter(db, resourceIndex = null) {
           const resource = recordsById.get(match.resourceId);
 
           if (!resource) {
+            removeMissingResourceIndex(resourceIndex, match.resourceId);
+            return null;
+          }
+
+          if (!nasFileExists(nasRoot, resource.file_path)) {
+            removeMissingResourceIndex(resourceIndex, resource.id);
             return null;
           }
 
@@ -287,10 +325,19 @@ function createResourcesRouter(db, resourceIndex = null) {
       `
         )
         .all(...parameters)
-        .map((resource) => ({
-          ...resource,
-          tags: parseTags(resource.tags)
-        }));
+        .map((resource) => {
+          const fileMissing = !nasFileExists(nasRoot, resource.file_path);
+
+          if (fileMissing) {
+            removeMissingResourceIndex(resourceIndex, resource.id);
+          }
+
+          return {
+            ...resource,
+            tags: parseTags(resource.tags),
+            file_missing: fileMissing
+          };
+        });
 
       return res.json({
         query: query || "",

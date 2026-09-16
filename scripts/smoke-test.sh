@@ -442,6 +442,46 @@ run_resource_api_tests() {
         process.exit(1);
     }
     ' "$CONTENT_SEARCH_RESPONSE" "$RESOURCE_ID"
+    rm -f -- "$RESOURCE_FILE"
+
+    MISSING_FILE_RESPONSE="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            "$BASE_URL/resources"
+    )"
+
+    node -e '
+    const result = JSON.parse(process.argv[1]);
+    const expectedId = Number(process.argv[2]);
+
+    const resource = result.resources.find(
+        (item) => item.id === expectedId,
+    );
+
+    if (!resource || resource.file_missing !== true) {
+        console.error("Missing resource file was not detected.");
+        process.exit(1);
+    }
+    ' "$MISSING_FILE_RESPONSE" "$RESOURCE_ID"
+
+    AFTER_FILE_DELETE_SEARCH="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            -G \
+            --data-urlencode "q=Resource archive" \
+            "$BASE_URL/resources/content-search"
+    )"
+
+    node -e '
+    const result = JSON.parse(process.argv[1]);
+
+    if (result.resources.length !== 0) {
+        console.error("Missing resource remained in content search.");
+        process.exit(1);
+    }
+    ' "$AFTER_FILE_DELETE_SEARCH"
+
+    printf "Resource archive test\n" >"$RESOURCE_FILE"
     DELETE_RESPONSE="$(
         curl -fs \
             -u "$AUTHENTICATION" \
@@ -533,7 +573,54 @@ run_authentication_limit_test() {
 
     echo "Authentication rate limit test passed."
 }
+run_system_status_test() {
+    BASE_URL="http://127.0.0.1:18000"
+    AUTHENTICATION="ci-user:ci-password"
 
+    STATUS_RESPONSE="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            "$BASE_URL/system/status"
+    )"
+
+    node -e '
+    const result = JSON.parse(process.argv[1]);
+    const battery = result.phone?.battery;
+
+    if (!battery || typeof battery.available !== "boolean") {
+        console.error("Battery availability status is missing.");
+        process.exit(1);
+    }
+
+    if (battery.available) {
+        if (
+            typeof battery.percentage !== "number" ||
+            battery.percentage < 0 ||
+            battery.percentage > 100
+        ) {
+            console.error("Battery percentage is invalid.");
+            process.exit(1);
+        }
+
+        if (
+            typeof battery.status !== "string" ||
+            typeof battery.health !== "string" ||
+            typeof battery.plugged !== "string"
+        ) {
+            console.error("Battery status fields are invalid.");
+            process.exit(1);
+        }
+    } else if (
+        typeof battery.reason !== "string" ||
+        battery.reason.length === 0
+    ) {
+        console.error("Unavailable battery status has no reason.");
+        process.exit(1);
+    }
+    ' "$STATUS_RESPONSE"
+
+    echo "System status API test passed."
+}
 ATTEMPT=1
 
 while [ "$ATTEMPT" -le 15 ]; do
@@ -546,6 +633,7 @@ while [ "$ATTEMPT" -le 15 ]; do
         echo "Smoke test passed: $RESPONSE"
         run_nas_api_tests
         run_resource_api_tests
+        run_system_status_test
         run_authentication_limit_test
         exit 0
     fi

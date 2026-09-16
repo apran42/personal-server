@@ -179,7 +179,16 @@
         <div id="load-value" class="value">-</div>
         <div class="detail">1분 · 5분 · 15분 평균</div>
       </section>
+      <section class="card">
+        <h2>스마트폰 배터리</h2>
+        <div id="battery-value" class="value">확인 중</div>
 
+        <div class="progress">
+          <div id="battery-bar" class="progress-bar"></div>
+        </div>
+
+        <div id="battery-detail" class="detail">-</div>
+      </section>
       <section class="card">
         <h2>서버 프로세스</h2>
         <div id="process-memory" class="value">-</div>
@@ -230,7 +239,84 @@
 
         return percent;
       }
+      function renderBattery(battery) {
+        const valueElement = document.querySelector("#battery-value");
+        const barElement = document.querySelector("#battery-bar");
+        const detailElement = document.querySelector("#battery-detail");
 
+        if (!battery?.available) {
+          valueElement.textContent = "사용 불가";
+          valueElement.className = "value status-warning";
+          barElement.style.width = "0%";
+          barElement.classList.remove("warning");
+          detailElement.textContent =
+            battery?.reason || "Termux:API 상태를 확인할 수 없습니다.";
+
+          return true;
+        }
+
+        const percentage =
+          typeof battery.percentage === "number" ? battery.percentage : 0;
+
+        const statusText =
+          {
+            CHARGING: "충전 중",
+            DISCHARGING: "사용 중",
+            FULL: "충전 완료",
+            NOT_CHARGING: "충전 안 함",
+            UNKNOWN: "상태 미확인"
+          }[battery.status] || battery.status;
+
+        const pluggedText =
+          {
+            PLUGGED_AC: "AC 충전기",
+            PLUGGED_USB: "USB",
+            PLUGGED_WIRELESS: "무선 충전",
+            UNPLUGGED: "전원 미연결",
+            UNKNOWN: "연결 상태 미확인"
+          }[battery.plugged] || battery.plugged;
+
+        const healthText =
+          {
+            GOOD: "정상",
+            OVERHEAT: "과열",
+            DEAD: "수명 종료",
+            OVER_VOLTAGE: "과전압",
+            UNSPECIFIED_FAILURE: "배터리 오류",
+            COLD: "저온",
+            UNKNOWN: "미확인"
+          }[battery.health] || battery.health;
+
+        const temperatureText =
+          typeof battery.temperatureC === "number"
+            ? `${battery.temperatureC.toFixed(1)}℃`
+            : "온도 미확인";
+
+        const hasCriticalHealth =
+          battery.health && !["GOOD", "UNKNOWN"].includes(battery.health);
+
+        const hasWarning =
+          percentage <= 20 ||
+          hasCriticalHealth ||
+          (typeof battery.temperatureC === "number" &&
+            battery.temperatureC >= 40);
+
+        valueElement.textContent = `${percentage.toFixed(0)}% · ${statusText}`;
+        valueElement.className = hasWarning
+          ? "value status-warning"
+          : "value status-good";
+
+        barElement.style.width = `${Math.min(Math.max(percentage, 0), 100)}%`;
+        barElement.classList.toggle("warning", hasWarning);
+
+        detailElement.textContent = [
+          pluggedText,
+          `상태 ${healthText}`,
+          temperatureText
+        ].join(" · ");
+
+        return hasWarning;
+      }
       function renderBackup(backup) {
         const statusElement = document.querySelector("#backup-status");
 
@@ -342,8 +428,12 @@
 
           renderBackup(data.backup);
 
+          const batteryWarning = renderBattery(data.phone?.battery);
+
           const hasWarning =
-            data.backup.stale || data.backup.cloud.status !== "success";
+            data.backup.stale ||
+            data.backup.cloud.status !== "success" ||
+            batteryWarning;
 
           statusMessage.className = hasWarning
             ? "status-warning"
