@@ -3,6 +3,7 @@ const nasRouter = require("./nas");
 const basicAuth = require("./auth");
 const createResourcesRouter = require("./resources");
 const createResourcePathUpdater = require("./resource-paths");
+const createResourceIndex = require("./resource-index");
 const express = require("express");
 const path = require("path");
 const { DatabaseSync } = require("node:sqlite");
@@ -16,6 +17,7 @@ const databasePath = process.env.DATABASE_PATH
   : path.join(__dirname, "data", "server.db");
 
 const db = new DatabaseSync(databasePath);
+const resourceIndex = createResourceIndex();
 const resourcesRouter = createResourcesRouter(db);
 
 nasRouter.setResourcePathUpdater(createResourcePathUpdater(db));
@@ -34,7 +36,7 @@ app.use(express.json({ limit: "100kb" }));
 app.use(basicAuth);
 app.use("/nas", nasRouter);
 app.use("/system", systemRouter);
-app.use("/resources", resourcesRouter);
+app.use("/resources", createResourcesRouter(db, resourceIndex));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {

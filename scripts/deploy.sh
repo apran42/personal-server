@@ -35,6 +35,7 @@ for FILE in \
     nas.js \
     system.js \
     resources.js \
+    resource-index.js \
     resource-paths.js; do
     cp "$REPO_DIR/$FILE" "$APP_DIR/$FILE"
 done

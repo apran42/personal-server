@@ -7,6 +7,7 @@ TEST_DIRECTORY="$(mktemp -d)"
 LOG_FILE="$TEST_DIRECTORY/server.log"
 TEST_NAS="$TEST_DIRECTORY/nas"
 TEST_DATABASE="$TEST_DIRECTORY/server.db"
+TEST_SEARCH_INDEX="$TEST_DIRECTORY/search-index.db"
 SERVER_PID=""
 
 mkdir -p "$TEST_NAS"
@@ -33,6 +34,7 @@ SERVER_USERNAME="ci-user" \
     PORT="18000" \
     NAS_ROOT="$TEST_NAS" \
     DATABASE_PATH="$TEST_DATABASE" \
+    SEARCH_INDEX_PATH="$TEST_SEARCH_INDEX" \
     node server.js >"$LOG_FILE" 2>&1 &
 
 SERVER_PID="$!"
@@ -177,7 +179,7 @@ run_resource_api_tests() {
     BASE_URL="http://127.0.0.1:18000"
     AUTHENTICATION="ci-user:ci-password"
     RESOURCE_DIRECTORY="$TEST_NAS/Resource Test"
-    RESOURCE_FILE="$RESOURCE_DIRECTORY/lecture.pdf"
+    RESOURCE_FILE="$RESOURCE_DIRECTORY/lecture.txt"
 
     mkdir -p "$RESOURCE_DIRECTORY"
     printf 'Resource archive test\n' >"$RESOURCE_FILE"
@@ -187,7 +189,7 @@ run_resource_api_tests() {
             -u "$AUTHENTICATION" \
             -H "Content-Type: application/json" \
             -d '{
-              "filePath":"Resource Test/lecture.pdf",
+              "filePath":"Resource Test/lecture.txt",
               "displayName":"Linux server lecture",
               "category":"Operating Systems",
               "semester":"2026-2",
@@ -198,7 +200,7 @@ run_resource_api_tests() {
     )"
 
     printf '%s' "$CREATE_RESPONSE" |
-        grep -q '"file_path":"Resource Test/lecture.pdf"'
+        grep -q '"file_path":"Resource Test/lecture.txt"'
 
     printf '%s' "$CREATE_RESPONSE" |
         grep -q '"tags":\["linux","server"\]'
@@ -214,8 +216,8 @@ run_resource_api_tests() {
         -X PATCH \
         -H "Content-Type: application/json" \
         -d '{
-      "path":"Resource Test/lecture.pdf",
-      "name":"lecture-renamed.pdf"
+      "path":"Resource Test/lecture.txt",
+      "name":"lecture-renamed.txt"
     }' \
         "$BASE_URL/nas/entry" \
         >/dev/null
@@ -227,7 +229,7 @@ run_resource_api_tests() {
     )"
 
     printf '%s' "$RENAME_SYNC_RESPONSE" |
-        grep -q '"file_path":"Resource Test/lecture-renamed.pdf"'
+        grep -q '"file_path":"Resource Test/lecture-renamed.txt"'
 
     curl -fs \
         -u "$AUTHENTICATION" \
@@ -240,7 +242,7 @@ run_resource_api_tests() {
         -u "$AUTHENTICATION" \
         -H "Content-Type: application/json" \
         -d '{
-      "path":"Resource Test/lecture-renamed.pdf",
+      "path":"Resource Test/lecture-renamed.txt",
       "destination":"Resource Destination"
     }' \
         "$BASE_URL/nas/move" \
@@ -254,7 +256,7 @@ run_resource_api_tests() {
 
     printf '%s' "$MOVE_SYNC_RESPONSE" |
         grep -q \
-            '"file_path":"Resource Destination/lecture-renamed.pdf"'
+            '"file_path":"Resource Destination/lecture-renamed.txt"'
 
     curl -fs \
         -u "$AUTHENTICATION" \
@@ -275,7 +277,7 @@ run_resource_api_tests() {
 
     printf '%s' "$DIRECTORY_RENAME_RESPONSE" |
         grep -q \
-            '"file_path":"Resource Archive/lecture-renamed.pdf"'
+            '"file_path":"Resource Archive/lecture-renamed.txt"'
 
     curl -fs \
         -u "$AUTHENTICATION" \
@@ -302,9 +304,9 @@ run_resource_api_tests() {
 
     printf '%s' "$DIRECTORY_MOVE_RESPONSE" |
         grep -q \
-            '"file_path":"Final Destination/Resource Archive/lecture-renamed.pdf"'
+            '"file_path":"Final Destination/Resource Archive/lecture-renamed.txt"'
 
-    RESOURCE_FILE="$TEST_NAS/Final Destination/Resource Archive/lecture-renamed.pdf"
+    RESOURCE_FILE="$TEST_NAS/Final Destination/Resource Archive/lecture-renamed.txt"
     LIST_RESPONSE="$(
         curl -fs \
             -u "$AUTHENTICATION" \
@@ -388,7 +390,7 @@ run_resource_api_tests() {
             -u "$AUTHENTICATION" \
             -H "Content-Type: application/json" \
             -d '{
-              "filePath":"Final Destination/Resource Archive/lecture-renamed.pdf",
+              "filePath":"Final Destination/Resource Archive/lecture-renamed.txt",
               "displayName":"Duplicate resource"
             }' \
             "$BASE_URL/resources"
@@ -398,6 +400,48 @@ run_resource_api_tests() {
         echo "Expected 409 for duplicate resource, got $DUPLICATE_STATUS."
         exit 1
     fi
+    INDEX_RESPONSE="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            -X POST \
+            "$BASE_URL/resources/$RESOURCE_ID/index"
+    )"
+
+    printf "%s" "$INDEX_RESPONSE" |
+        grep -q '"status":"ready"'
+
+    CONTENT_SEARCH_RESPONSE="$(
+        curl -fs \
+            -u "$AUTHENTICATION" \
+            -G \
+            --data-urlencode "q=Resource archive" \
+            "$BASE_URL/resources/content-search"
+    )"
+
+    node -e '
+    const result = JSON.parse(process.argv[1]);
+    const expectedId = Number(process.argv[2]);
+
+    if (result.resources.length !== 1) {
+        console.error("Expected one content-search result.");
+        process.exit(1);
+    }
+
+    const resource = result.resources[0];
+
+    if (resource.id !== expectedId) {
+        console.error("Content search returned the wrong resource.");
+        process.exit(1);
+    }
+
+    if (
+        typeof resource.snippet !== "string" ||
+        !resource.snippet.includes("[Resource]")
+    ) {
+        console.error("Content search did not return a highlighted snippet.");
+        process.exit(1);
+    }
+    ' "$CONTENT_SEARCH_RESPONSE" "$RESOURCE_ID"
     DELETE_RESPONSE="$(
         curl -fs \
             -u "$AUTHENTICATION" \
@@ -407,7 +451,8 @@ run_resource_api_tests() {
 
     printf '%s' "$DELETE_RESPONSE" |
         grep -q '"deleted":true'
-
+    printf "%s" "$DELETE_RESPONSE" |
+        grep -q '"index_deleted":true'
     printf '%s' "$DELETE_RESPONSE" |
         grep -q '"file_deleted":false'
 
